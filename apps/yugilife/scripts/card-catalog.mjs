@@ -105,9 +105,6 @@ function subtypeFor(card, anomalies) {
   return match
 }
 
-// YGOPRODeck wraps Normal Monster flavor text in a pair of apostrophes that the printed card does
-// not have. Only a complete, unambiguous wrapper is removed, so quotation marks and apostrophes that
-// belong to the flavor text itself survive.
 function flavorText(value, card, anomalies) {
   const trimmed = value.trim()
   if (!trimmed.startsWith("''") || !trimmed.endsWith("''") || trimmed.length < 4) return value

@@ -78,9 +78,6 @@ export function useCardCatalog(): CardCatalogManager {
         if (!publish(restored) || !restored) return
         // A saved copy is usable at once, but it must not outlive a newer published catalog.
         void updateRestoredCardCatalog().then((updated) => {
-          // The loader already discards an update that an explicit load superseded, and it has
-          // closed the worker this state still holds, so the replacement is published even if
-          // this effect has since restarted for a route transition.
           if (updated) publish(updated, true)
         })
       })
@@ -127,8 +124,6 @@ export function useCardCatalog(): CardCatalogManager {
     }
   }, [])
 
-  // `begin` is stable, so the manager changes identity only when the catalog state itself does.
-  // Rebuilding it on every render would defeat memoization in every consumer.
   const load = useCallback(() => void begin(state.status !== "idle"), [begin, state.status])
 
   return useMemo(() => ({ load, state }), [load, state])

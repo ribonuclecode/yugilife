@@ -55,7 +55,6 @@ export function TextSizeControl({
 
 interface TextCompressionControlProps {
   defaultTypography: TextTypography
-  /** Control name inside a text-style group, where the group heading already names the style. */
   label: string
   layerId: string
   setTextTypography: (layerId: string, styleId: string, patch: EditorTypographyPatch) => void
@@ -100,8 +99,6 @@ export function TextCompressionControl({
           setTextTypography(layerId, styleId, { maxAutoCompressionX: value / 100 })
         }
       />
-      {/* A reset that is dead most of the time is noise, so it appears only once there is an
-        override to undo — which also makes its presence the signal that this style was touched. */}
       {usesOverride && (
         <ConfirmDialog
           confirmLabel="Reset compression"
@@ -194,27 +191,15 @@ interface TextPaintControlProps {
   usesOverride: boolean
 }
 
-/** Width offered for a newly added outline when the template declares none to inherit. */
 const addedStrokeWidth = 4
 const addedStrokeColor = "#111111"
 const maxStrokeWidth = 24
-/** Outlines are thin enough that whole pixels are a coarse grid, so the slider moves in halves. */
 const strokeWidthStep = 0.5
 
-/** Snaps to the half-pixel grid, which also clears the float drift of a fractional slider step. */
 function snapStrokeWidth(width: number) {
   return Math.round(width / strokeWidthStep) * strokeWidthStep
 }
 
-/**
- * Fill and outline for one resolved text style. Both are ordinary sparse typography patches, so this
- * control introduces no new persisted shape: it writes into the same `textTypography` override slot
- * that semantic styles and fit profiles already use.
- *
- * Overrides are keyed by the *currently resolved* style, which is what makes a full-art title and an
- * ordinary title independently stylable. The enclosing style group names that style, so the choice
- * reads as scoped rather than global.
- */
 export function TextPaintControl({
   defaultTypography,
   layerId,
@@ -226,17 +211,13 @@ export function TextPaintControl({
 }: TextPaintControlProps) {
   const stroke = typography.stroke
   const removeStroke = () =>
-    // `null` clears an inherited template outline; `undefined` only drops this user override. Both
-    // end with no outline, but only `null` would survive a template that declares one.
+    // `null` clears an inherited template outline; `undefined` only drops the user override.
     setTextTypography(layerId, styleId, {
       stroke: defaultTypography.stroke ? null : undefined,
     })
 
   return (
     <div className="grid gap-3">
-      {/* Each control names itself, so they sit on one row as peers rather than behind a "Color"
-        label that would push them into the right margin. The row wraps at narrow widths instead of
-        crushing the triggers. */}
       <div className="flex flex-wrap items-center gap-1">
         <ColorPickerPopover
           triggerLabel="Text color"

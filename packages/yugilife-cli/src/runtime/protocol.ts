@@ -34,7 +34,6 @@ export interface SerializedRenderWarning {
 export interface BrowserRenderSuccess {
   readonly format: RenderFormat
   readonly ok: true
-  /** SVG text for SVG output, or an image data URL for raster output. */
   readonly payload: string
   readonly warnings: readonly SerializedRenderWarning[]
 }

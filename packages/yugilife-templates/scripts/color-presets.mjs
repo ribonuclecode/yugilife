@@ -1,13 +1,14 @@
 import { createHash } from "node:crypto"
-import { mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises"
+import { mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { fileURLToPath } from "node:url"
 
+import { listFiles } from "../../../scripts/list-files.mjs"
 import { runCommand } from "../../../scripts/run-command.mjs"
 
+import { packageDirectory } from "./paths.mjs"
+
 const chromapairVersion = "1.0.0"
-const packageDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const templatesDirectory = path.join(packageDirectory, "templates")
 const checkOnly = process.argv.includes("--check")
 const provenanceFileName = "color-presets.provenance.json"
@@ -16,16 +17,7 @@ let interruptedSignal
 const interruption = new AbortController()
 
 async function findFiles(directory, basename) {
-  const entries = await readdir(directory, { withFileTypes: true })
-  return (
-    await Promise.all(
-      entries.map(async (entry) => {
-        const resolved = path.join(directory, entry.name)
-        if (entry.isDirectory()) return findFiles(resolved, basename)
-        return entry.name === basename ? [resolved] : []
-      }),
-    )
-  ).flat()
+  return (await listFiles(directory)).filter((file) => path.basename(file) === basename)
 }
 
 function sha256(value) {

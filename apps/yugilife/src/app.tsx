@@ -32,8 +32,6 @@ function RouteLoadingFallback() {
 }
 
 export default function App() {
-  // Every route is a real path below the deploy base (`/yugilife/` on GitHub Pages), so each page
-  // has its own address for search engines and link previews. See scripts/seo-pages.mjs.
   const basename = import.meta.env.BASE_URL.replace(/\/$/, "")
   const routePath = window.location.pathname.slice(basename.length).replace(/\/$/, "")
   const landingEntry = routePath === ""

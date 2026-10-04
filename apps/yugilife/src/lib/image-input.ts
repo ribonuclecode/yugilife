@@ -1,5 +1,5 @@
-export const maximumImageInputBytes = 32 * 1024 * 1024
-export const maximumImagePixels = 16_777_216
+const maximumImageInputBytes = 32 * 1024 * 1024
+const maximumImagePixels = 16_777_216
 
 export async function inspectImageInput(source: Blob) {
   if (source.size > maximumImageInputBytes) throw new Error("Choose an image smaller than 32 MiB.")

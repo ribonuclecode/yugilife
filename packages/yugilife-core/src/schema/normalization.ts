@@ -1,4 +1,4 @@
-import type { LayerDefinition, SemanticTextStyle, TextTypography } from "./contracts/index.js"
+import type { LayerDefinition, SemanticTextStyle, TextTypography } from "../contracts/index.js"
 
 type UnknownRecord = Record<string, unknown>
 
@@ -130,7 +130,6 @@ function resolveTypography(
 
 function resolveStyle(
   style: unknown,
-  _base: TextTypography,
   context: NormalizationContext,
   location: string,
 ): SemanticTextStyle {
@@ -189,12 +188,7 @@ function resolveLayers(
       ...(Array.isArray(styles)
         ? {
             semanticStyles: styles.map((style, styleIndex) =>
-              resolveStyle(
-                style,
-                typography,
-                context,
-                `${layerLocation}.semanticStyles[${styleIndex}]`,
-              ),
+              resolveStyle(style, context, `${layerLocation}.semanticStyles[${styleIndex}]`),
             ),
           }
         : {}),
@@ -202,7 +196,6 @@ function resolveLayers(
   })
 }
 
-/** Expands current-schema authoring conveniences into the explicit runtime template contract. */
 export function normalizeCardTemplateAuthoring(input: UnknownRecord): UnknownRecord {
   if (input["schemaVersion"] !== 1) return input
   const context: NormalizationContext = {

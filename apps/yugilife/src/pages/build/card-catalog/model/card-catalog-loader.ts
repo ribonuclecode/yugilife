@@ -1,3 +1,5 @@
+import { isRecord } from "@/lib/utils"
+
 import {
   getCardCatalogStorageMode,
   readCachedCardCatalog,
@@ -63,10 +65,6 @@ export interface LoadedCardCatalog {
 }
 
 type ProgressCallback = (progress: CardCatalogLoadProgress) => void
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
 
 function exactKeys(value: Record<string, unknown>, expected: readonly string[]) {
   const actual = Object.keys(value).sort()
@@ -411,9 +409,7 @@ let loadGeneration = 0
 
 let activeRestore: Promise<LoadedCardCatalog | undefined> | undefined
 let activeUpdate: Promise<LoadedCardCatalog | undefined> | undefined
-/** The saved artifact a passively restored catalog was read from, so an update can compare it. */
 const restoredArtifacts = new WeakMap<LoadedCardCatalog, string>()
-/** The restored catalog most recently confirmed to match the published manifest. */
 let confirmedCurrent: LoadedCardCatalog | undefined
 
 export function restoreCardCatalog(): Promise<LoadedCardCatalog | undefined> {
@@ -444,19 +440,6 @@ export function restoreCardCatalog(): Promise<LoadedCardCatalog | undefined> {
   return pending
 }
 
-/**
- * Brings a passively restored catalog up to the published version without any user action.
- *
- * Restoring reads only the saved copy, so on its own it would keep a browser on whatever catalog it
- * first downloaded for as long as that copy stays valid, however many corrected releases follow.
- * This checks the small revalidated manifest once the saved copy is searchable and, when a
- * different catalog is published, downloads and verifies it in a fresh worker while the old one
- * keeps answering searches. Only a verified and saved replacement is swapped in. Any failure keeps
- * the verified saved copy and is retried on a later visit; it never surfaces as an editor error.
- *
- * Resolves to the replacement, or to `undefined` when the saved copy is already current, nothing
- * restored is loaded, a failure occurred, or an explicit load superseded the update.
- */
 export function updateRestoredCardCatalog(): Promise<LoadedCardCatalog | undefined> {
   const current = loaded
   const currentArtifact = current ? restoredArtifacts.get(current) : undefined
@@ -497,8 +480,6 @@ export function updateRestoredCardCatalog(): Promise<LoadedCardCatalog | undefin
     }
     const replacement = withStorageWarning({ ...decoded, source: "network" })
     loaded = replacement
-    // Searches still running on the old worker are discarded by their callers once the new client
-    // is published, so closing it here cannot leave a stale result on screen.
     current.search.dispose()
     return replacement
   })()

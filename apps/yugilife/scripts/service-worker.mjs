@@ -1,13 +1,6 @@
 import { createHash } from "node:crypto"
 import { readFile } from "node:fs/promises"
 
-/**
- * Emits `sw.js` into the build, stamped with a hash of the build's own file names. Those names carry
- * content hashes, so any change to the app yields a new worker, which is what makes every deploy
- * replace the previous one. Nothing is emitted in development.
- *
- * @returns {import("vite").Plugin}
- */
 export function yugilifeServiceWorker() {
   return {
     apply: "build",

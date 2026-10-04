@@ -64,14 +64,6 @@ async function gradedPixels(preparation: TexturePreparation) {
   return pixels
 }
 
-/**
- * Compares every prepared texture against grading the same region here and now.
- *
- * Both sides are read back from a canvas that received the pixels the same way, so the comparison
- * isolates the one thing storing a texture could damage: whether the separated, losslessly encoded
- * planes restore the exact bytes that grading produced. The screenshots cannot make that claim on
- * their own — a texture drawn behind other layers can be wrong where nothing shows it.
- */
 export async function verifyPreparedTextures(
   textures: PreparedTextures,
 ): Promise<PreparedTextureCheck> {

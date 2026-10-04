@@ -18,7 +18,6 @@ import { useThemeContext } from "@/lib/theme-context"
 import type { CursorPreference } from "@/lib/preferences-store"
 import type { Theme } from "@/lib/theme-context"
 
-/** The accent presets, with the app's own colour first. */
 const ACCENT_SWATCHES = [DEFAULT_ACCENT_COLOR, "#6B97FF", "#D66BFF", "#65D48A", "#F5C85B"]
 
 const themeOptions = [
@@ -32,14 +31,6 @@ const cursorOptions = [
   { icon: MousePointer, label: "Native", value: "native" as CursorPreference },
 ]
 
-/**
- * Theme and accent under one trigger, so the header spends one slot on preferences most people set
- * once and keeps its shape at every width.
- *
- * The panel is a popover holding the inline `Dropdown`, not a menu: a menu owns the keyboard — its
- * typeahead would swallow what is typed into the picker's hex field — and closes on the first
- * selection, when trying themes against accents is the whole point of pairing them.
- */
 export function AppearanceMenu() {
   const { accentColor, setAccentColor } = useAccentColorContext()
   const { setTheme, theme } = useThemeContext()
@@ -50,14 +41,7 @@ export function AppearanceMenu() {
   const actionsRef = useRef<{ close: () => void; unmount: () => void } | null>(null)
 
   return (
-    <Popover.Root
-      actionsRef={actionsRef}
-      // Non-modal: the page behind stays live, so a theme or an accent can be judged against it
-      // while the panel is still open.
-      modal={false}
-      onOpenChange={setOpen}
-      open={open}
-    >
+    <Popover.Root actionsRef={actionsRef} modal={false} onOpenChange={setOpen} open={open}>
       <Popover.Trigger
         render={
           <Tooltip content="Settings" side="bottom" sideOffset={10}>
@@ -72,8 +56,6 @@ export function AppearanceMenu() {
           <motion.div
             animate={open ? { opacity: 1, scaleY: 1, y: 0 } : { opacity: 0, scaleY: 0.96, y: -4 }}
             initial={{ opacity: 0, scaleY: 0.96, y: -4 }}
-            // Base UI defers unmount while actionsRef is set; release it once the exit spring has
-            // finished so the close animation fully plays.
             onAnimationComplete={() => {
               if (!open) actionsRef.current?.unmount()
             }}

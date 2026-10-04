@@ -8,9 +8,7 @@ import original021 from "./assets/comparison/021-original.webp"
 
 interface Reading {
   readonly model: string
-  /** Empty when the model returned nothing a segmenter could be given. */
   readonly phrases: readonly string[]
-  /** Marks a phrase worth stopping on — the wrong noun, or the model's own scaffolding. */
   readonly notable?: readonly string[]
 }
 
@@ -21,14 +19,6 @@ interface ArtworkReadings {
   readonly readings: readonly Reading[]
 }
 
-/**
- * What each phrase model actually said, verbatim from the benchmark's phrase cache.
- *
- * The same four artworks the mask figures use, so the phrase and the mask it produced can be read
- * against each other. Nothing here is tidied up: the normalized subject phrases are exactly the
- * strings that were handed to SAM3, including the one model that handed it a piece of its own
- * prompt scaffolding.
- */
 const ARTWORKS: readonly ArtworkReadings[] = [
   {
     name: "Endymion, the Mighty Master of Magic",
@@ -119,11 +109,6 @@ const ARTWORKS: readonly ArtworkReadings[] = [
   },
 ]
 
-/**
- * The phrases the four frontends produced, beside the artwork they were looking at. A timing table
- * says which model answers fastest; it cannot show that the answers are the problem, which is only
- * visible with the picture next to the words.
- */
 export function PhraseModelReadings() {
   return (
     <figure>
@@ -131,8 +116,6 @@ export function PhraseModelReadings() {
         {ARTWORKS.map((artwork) => (
           <div className="flex items-start gap-4 sm:gap-5" key={artwork.name}>
             <img
-              // The article caps image height at 70vh with no object fit, which distorts anything
-              // taller than it is wide. These are card artworks.
               alt={`${artwork.name}: ${artwork.what}.`}
               className="!my-0 !max-h-none !w-24 shrink-0 !rounded-lg sm:!w-32"
               loading="lazy"
@@ -140,17 +123,11 @@ export function PhraseModelReadings() {
             />
             <div className="min-w-0 flex-1">
               <div className={cn(FIGURE_TYPE.heading, "text-foreground")}>{artwork.name}</div>
-              {/* A description, not a note: `note` is the second line under a label, and this one
-                  sits under a heading. */}
               <div className={cn(FIGURE_TYPE.description, "text-muted-foreground mt-0.5")}>
                 {artwork.what}
               </div>
-              {/* Table type, not label type: this is a row of readings per model, and forty-eight
-                  phrase chips at label size is a wall rather than a list. */}
               <dl className="mt-3 grid gap-2">
                 {artwork.readings.map((reading) => (
-                  // A real two-column grid rather than a wrapping row: a model whose phrases run
-                  // to two lines must not start them at a different left edge from the model above.
                   <div
                     className="grid gap-1 sm:grid-cols-[7.5rem_1fr] sm:items-baseline sm:gap-x-3"
                     key={reading.model}
@@ -170,9 +147,7 @@ export function PhraseModelReadings() {
                               FIGURE_TYPE.table,
                               "rounded-md px-1.5 py-0.5",
                               reading.notable?.includes(phrase)
-                                ? // The ones worth stopping on wear the accent; everything else is
-                                  // context for them.
-                                  "bg-(--user-accent) text-(--user-accent-foreground)"
+                                ? "bg-(--user-accent) text-(--user-accent-foreground)"
                                 : "bg-surface-2 text-foreground",
                             )}
                             key={phrase}

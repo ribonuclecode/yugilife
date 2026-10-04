@@ -17,7 +17,7 @@ interface YlmAssetDescriptor {
   sha256: string
 }
 
-export interface YlmIdentity {
+interface YlmIdentity {
   artworkId: string
   cardCid: string
   name: string

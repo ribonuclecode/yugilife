@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url"
 import { chromium } from "playwright-core"
 
 import { CliError } from "./errors.js"
+import { mediaTypeFor } from "./media-types.js"
 
 import type {
   BrowserApi,
@@ -33,36 +34,6 @@ interface BrowserGlobal {
 
 const playwrightVersion = "1.62.0"
 const rendererReadyTimeoutMs = 15_000
-
-function contentType(filePath: string) {
-  switch (path.extname(filePath).toLowerCase()) {
-    case ".css":
-      return "text/css; charset=utf-8"
-    case ".js":
-      return "text/javascript; charset=utf-8"
-    case ".json":
-      return "application/json; charset=utf-8"
-    case ".jpeg":
-    case ".jpg":
-      return "image/jpeg"
-    case ".otf":
-      return "font/otf"
-    case ".png":
-      return "image/png"
-    case ".svg":
-      return "image/svg+xml"
-    case ".ttf":
-      return "font/ttf"
-    case ".woff":
-      return "font/woff"
-    case ".woff2":
-      return "font/woff2"
-    case ".webp":
-      return "image/webp"
-    default:
-      return "application/octet-stream"
-  }
-}
 
 function safeChildPath(root: string, relativePath: string) {
   const resolved = path.resolve(root, relativePath)
@@ -140,7 +111,7 @@ async function createHarnessServer(
         const contents = await readFile(filePath)
         response.writeHead(200, {
           "cache-control": "no-store",
-          "content-type": contentType(filePath),
+          "content-type": mediaTypeFor(filePath),
         })
         response.end(contents)
       } catch {
@@ -192,7 +163,7 @@ function defaultBundlePath() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../browser/renderer.js")
 }
 
-function resolveCoreDistributionPath() {
+function getCoreDistributionPath() {
   try {
     const packageJsonPath = import.meta.resolve("yugilife-core/package.json")
     return path.join(path.dirname(fileURLToPath(packageJsonPath)), "dist")
@@ -209,12 +180,25 @@ export function getPlaywrightVersion() {
   return playwrightVersion
 }
 
-export function getChromiumExecutablePath() {
+function getChromiumExecutablePath() {
   return chromium.executablePath()
 }
 
-export function getCoreDistributionPath() {
-  return resolveCoreDistributionPath()
+function interrupted() {
+  return new CliError("CLI_INTERRUPTED", "The render was interrupted.")
+}
+
+export async function assertChromiumInstalled(executablePath = getChromiumExecutablePath()) {
+  try {
+    await access(executablePath)
+  } catch (error) {
+    throw new CliError(
+      "BROWSER_UNAVAILABLE",
+      `Required YugiLife Chromium build is not installed at "${executablePath}".\nRun:\n  pnpm setup:browsers`,
+      { cause: error },
+    )
+  }
+  return executablePath
 }
 
 async function abortable<T>(
@@ -225,12 +209,12 @@ async function abortable<T>(
   if (!signal) return promise
   if (signal.aborted) {
     onAbort()
-    throw new CliError("CLI_INTERRUPTED", "The render was interrupted.")
+    throw interrupted()
   }
   return await new Promise<T>((resolve, reject) => {
     const abort = () => {
       onAbort()
-      reject(new CliError("CLI_INTERRUPTED", "The render was interrupted."))
+      reject(interrupted())
     }
     signal.addEventListener("abort", abort, { once: true })
     void promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", abort))
@@ -253,27 +237,16 @@ export class BrowserHost {
   async start(signal?: AbortSignal) {
     if (this.#page) return
     if (this.#closing) throw new CliError("HARNESS_UNAVAILABLE", "The browser host is closing.")
-    if (signal?.aborted) throw new CliError("CLI_INTERRUPTED", "The render was interrupted.")
+    if (signal?.aborted) throw interrupted()
 
-    const executablePath = this.#options.browserExecutablePath ?? getChromiumExecutablePath()
-    try {
-      await access(executablePath)
-    } catch (error) {
-      throw new CliError(
-        "BROWSER_UNAVAILABLE",
-        `Required YugiLife Chromium build is not installed at "${executablePath}".\nRun:\n  pnpm setup:browsers`,
-        { cause: error },
-      )
-    }
+    const executablePath = await assertChromiumInstalled(this.#options.browserExecutablePath)
 
     try {
       this.#server = await createHarnessServer(
         this.#options.bundlePath ?? defaultBundlePath(),
         this.#options.coreDistributionPath ?? getCoreDistributionPath(),
       )
-      if (signal?.aborted) {
-        throw new CliError("CLI_INTERRUPTED", "The render was interrupted.")
-      }
+      if (signal?.aborted) throw interrupted()
       try {
         this.#browser = await chromium.launch({ executablePath, headless: true })
       } catch (error) {
@@ -314,15 +287,18 @@ export class BrowserHost {
     }
   }
 
+  #startedPage() {
+    if (!this.#page) throw new CliError("HARNESS_UNAVAILABLE", "The browser host has not started.")
+    return this.#page
+  }
+
   async smoke(signal?: AbortSignal): Promise<BrowserSmokeResult> {
-    const page = this.#page
-    if (!page) throw new CliError("HARNESS_UNAVAILABLE", "The browser host has not started.")
+    const evaluation = this.#startedPage().evaluate(async () => {
+      const api = (globalThis as unknown as BrowserGlobal).__yugilifeCli
+      if (!api) throw new Error("The YugiLife browser API is unavailable.")
+      return await api.smoke()
+    })
     try {
-      const evaluation = page.evaluate(async () => {
-        const api = (globalThis as unknown as BrowserGlobal).__yugilifeCli
-        if (!api) throw new Error("The YugiLife browser API is unavailable.")
-        return await api.smoke()
-      })
       return await abortable(evaluation, signal, () => this.cancel())
     } catch (error) {
       if (error instanceof CliError) throw error
@@ -336,31 +312,25 @@ export class BrowserHost {
     request: SerializedRenderRequest,
     signal?: AbortSignal,
   ): Promise<BrowserRenderSuccess> {
-    const page = this.#page
-    if (!page) throw new CliError("HARNESS_UNAVAILABLE", "The browser host has not started.")
+    const evaluation = this.#startedPage().evaluate(async (renderRequest) => {
+      const api = (globalThis as unknown as BrowserGlobal).__yugilifeCli
+      if (!api) throw new Error("The YugiLife browser API is unavailable.")
+      return await api.render(renderRequest)
+    }, request)
+    let response
     try {
-      const evaluation = page.evaluate(async (renderRequest) => {
-        const api = (globalThis as unknown as BrowserGlobal).__yugilifeCli
-        if (!api) throw new Error("The YugiLife browser API is unavailable.")
-        return await api.render(renderRequest)
-      }, request)
-      const response = await abortable(evaluation, signal, () => this.cancel())
-      if (!response.ok) {
-        if (response.error.code === "ABORTED") {
-          throw new CliError("CLI_INTERRUPTED", response.error.message)
-        }
-        if (response.error.code === "RENDER_VALIDATION_FAILED") {
-          throw new CliError("RENDER_VALIDATION_FAILED", response.error.message)
-        }
-        throw new CliError("RENDER_FAILED", response.error.message)
-      }
-      return response
+      response = await abortable(evaluation, signal, () => this.cancel())
     } catch (error) {
       if (error instanceof CliError) throw error
       throw new CliError("HARNESS_UNAVAILABLE", "The browser renderer stopped unexpectedly.", {
         cause: error,
       })
     }
+    if (response.ok) return response
+    const { code, message } = response.error
+    if (code === "ABORTED") throw new CliError("CLI_INTERRUPTED", message)
+    if (code === "RENDER_VALIDATION_FAILED") throw new CliError("RENDER_VALIDATION_FAILED", message)
+    throw new CliError("RENDER_FAILED", message)
   }
 
   cancel() {

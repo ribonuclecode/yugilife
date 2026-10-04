@@ -4,24 +4,11 @@ import type { RefObject } from "react"
 
 import "./border-glow.css"
 
-/** Pointer speed, in px per ms, at which the borders reach full strength. */
 const fullSpeed = 1.6
-/** How long the light stays at its strength after the pointer last moved, in ms. */
 const holdMs = 450
-/** Time constant of the fade after the hold, and of the rise toward a new strength, in ms. */
 const fadeMs = 900
 const riseMs = 140
 
-/**
- * Lights the tile borders near the pointer while it is moving. Off unless `enabled` is passed:
- * switched off, it neither listens to the pointer nor draws anything.
- *
- * The pointer's viewport position and a 0–1 strength are written to CSS custom properties on the
- * grid; every tile draws its border from those alone (see border-glow.css), so a move costs
- * one style write and no React render. Strength follows the pointer's speed: it swells in, holds
- * for a moment after the pointer stops, and then fades slowly, so resting the mouse on a tile
- * leaves no border behind. Only a mouse or pen drives it.
- */
 export function useBorderGlow(ref: RefObject<HTMLElement | null>, enabled = false) {
   useEffect(() => {
     const element = ref.current
@@ -29,8 +16,6 @@ export function useBorderGlow(ref: RefObject<HTMLElement | null>, enabled = fals
     if (!window.matchMedia("(pointer: fine)").matches) return
     element.dataset.borderGlow = ""
 
-    // `energy` is what the pointer's speed asks for; `glow` is what is drawn, easing toward it, so
-    // the light swells in and lingers instead of snapping on and off.
     let energy = 0
     let glow = 0
     let frame = 0
@@ -63,7 +48,6 @@ export function useBorderGlow(ref: RefObject<HTMLElement | null>, enabled = fals
       lastTime = event.timeStamp
       element.style.setProperty("--bento-pointer-x", `${event.clientX}px`)
       element.style.setProperty("--bento-pointer-y", `${event.clientY}px`)
-      // The first move after a rest has no meaningful speed yet.
       if (elapsed > 100) return
       energy = Math.max(energy, Math.min(1, distance / Math.max(1, elapsed) / fullSpeed))
       if (!frame) {

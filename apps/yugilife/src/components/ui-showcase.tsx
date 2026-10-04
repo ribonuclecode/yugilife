@@ -570,14 +570,11 @@ function TabsExamples() {
 export function UIShowcase() {
   return (
     <>
-      {/* Switches */}
       <SwitchExample />
       <CheckboxExamples />
 
-      {/* Dropdowns */}
       <DropdownExamples />
 
-      {/* Accordions */}
       <Accordion type="single" collapsible defaultValue="item-1">
         <AccordionItem value="item-1">
           <AccordionTrigger>What is this component?</AccordionTrigger>
@@ -635,7 +632,6 @@ export function UIShowcase() {
         </AccordionItem>
       </AccordionGroup>
 
-      {/* Dialog */}
       <Dialog>
         <DialogTrigger asChild>
           <Button variant="tertiary">Open dialog</Button>
@@ -654,7 +650,6 @@ export function UIShowcase() {
         </DialogContent>
       </Dialog>
 
-      {/* Tooltips */}
       <Tooltip content="Save your changes">
         <Button variant="tertiary">Hover me</Button>
       </Tooltip>
@@ -694,13 +689,10 @@ export function UIShowcase() {
         </Tooltip>
       </div>
 
-      {/* Color pickers */}
       <ColorPickerExamples />
 
-      {/* Editor control primitives */}
       <EditorControlsShowcase />
 
-      {/* Preview workspace and authored code */}
       <div className="h-80 w-full">
         <PreviewPlayground contentHeight={240} contentWidth={168}>
           <div className="bg-foreground text-background grid size-full place-items-center">
@@ -710,13 +702,10 @@ export function UIShowcase() {
       </div>
       <CodeBlock code={`1<sup>st</sup> Edition`} />
 
-      {/* Sliders */}
       <SliderExamples />
 
-      {/* Selects */}
       <SelectExamples />
 
-      {/* Tabs */}
       <TabsExamples />
     </>
   )

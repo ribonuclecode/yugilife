@@ -8,7 +8,6 @@ export interface ArtworkMaskRequest {
   effects: ArtworkMaskEffects
 }
 
-/** Native PNG for composition; bounded RGBA for the interactive workspace. */
 export interface ArtworkMaskFrame {
   blob: Blob
   width: number

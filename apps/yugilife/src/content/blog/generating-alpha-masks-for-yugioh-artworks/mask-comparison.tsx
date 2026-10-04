@@ -41,14 +41,6 @@ import sam2mattingAlpha021 from "./assets/comparison/021-sam2matting-alpha.webp"
 import toonout021 from "./assets/comparison/021-toonout.webp"
 import toonoutAlpha021 from "./assets/comparison/021-toonout-alpha.webp"
 
-/**
- * The four artworks every mode below is shown against, in a fixed order. Not a random sample: each
- * fails differently, so one mode switch shows a discarded aura, a total collapse, a clean result
- * and a busy composition at once. Portrait crops share the first row, squares the second.
- *
- * The 1px dilation rings are deliberately not among the modes: they change ~0.4% of pixels by at
- * most 0.15 alpha, which at this size is the same picture twice. What they did is in the prose.
- */
 const ARTWORKS = [
   "Endymion, the Mighty Master of Magic",
   "Odd-Eyes Rebellion Dragon",
@@ -56,33 +48,21 @@ const ARTWORKS = [
   "The Arrival Cyberse @Ignister",
 ] as const
 
-/**
- * What to show, on the right. The untouched artwork belongs here rather than among the methods: it
- * is not a way of masking anything, it is what every method was applied to.
- */
 const VIEWS = [
   { id: "original", label: "Original" },
   { id: "cutout", label: "Cutout" },
   { id: "alpha", label: "Alpha mask" },
 ] as const
 
-/** The view the figure opens on: a result, with the original one tab away. */
 const DEFAULT_VIEW = 1
 
 interface ComparisonMode {
   readonly id: string
   readonly label: string
-  /** The artwork with the mask applied. One entry per ARTWORKS, in the same order. */
   readonly cutouts: readonly string[]
-  /** The mask itself, as grayscale coverage. White is kept, black is removed. */
   readonly alphas?: readonly string[]
 }
 
-/**
- * A checkerboard behind every cutout. Transparency is the entire subject of this post, so a plain
- * surface would hide exactly the difference the figure exists to show — a kept background and a
- * correct cutout look identical against an opaque panel.
- */
 const checkerboard = {
   backgroundImage:
     "linear-gradient(45deg, var(--muted) 25%, transparent 25%, transparent 75%, var(--muted) 75%), linear-gradient(45deg, var(--muted) 25%, transparent 25%, transparent 75%, var(--muted) 75%)",
@@ -90,7 +70,6 @@ const checkerboard = {
   backgroundSize: "16px 16px",
 }
 
-/** No caption of its own: the tabs already name what is on screen. */
 function ComparisonFigure({ modes }: { modes: readonly ComparisonMode[] }) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [viewIndex, setViewIndex] = useState(DEFAULT_VIEW)
@@ -150,8 +129,6 @@ function ComparisonFigure({ modes }: { modes: readonly ComparisonMode[] }) {
                 : showAlpha && alpha !== undefined
                   ? alpha
                   : mode.cutouts[artworkIndex]
-              // Only a cutout needs the checkerboard: it is the one view where a kept background
-              // and a removed one look alike against a plain surface.
               const transparent = !showOriginal && !(showAlpha && alpha !== undefined)
               return (
                 <div
@@ -163,8 +140,6 @@ function ComparisonFigure({ modes }: { modes: readonly ComparisonMode[] }) {
                   style={transparent ? checkerboard : undefined}
                 >
                   <img
-                    // The article's shared image rules cap height at 70vh without an object fit,
-                    // which distorts anything taller than it is wide. These are card artworks.
                     alt={
                       showOriginal
                         ? `${artwork}: the original artwork`

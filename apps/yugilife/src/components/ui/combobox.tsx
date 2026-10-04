@@ -2,7 +2,7 @@ import { createElement, forwardRef, useCallback, useEffect, useMemo, useRef, use
 
 import { Autocomplete as AutocompletePrimitive } from "@base-ui/react/autocomplete"
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox"
-import { AnimatePresence, motion } from "framer-motion"
+import { motion } from "framer-motion"
 
 import { useProximityHover, useRegisterProximityItem } from "@/hooks/use-proximity-hover"
 import { Elevated } from "@/lib/elevated"
@@ -13,13 +13,12 @@ import { exitFallbackMs, spring } from "@/lib/springs"
 import { cn } from "@/lib/utils"
 
 import { mergeIds, useFieldContext } from "./field-context"
+import { FocusRing, HoverHighlight, SelectedHighlight } from "./highlights"
 
 import type { IconName } from "@/lib/icon-context"
 import type { SizeVariant } from "@/lib/size-context"
 import type { ComponentPropsWithoutRef, HTMLAttributes } from "react"
 
-// Match Select's brief selection acknowledgment before an item-press closes
-// the popup. Other close reasons remain immediate.
 const selectionAckMs = 300
 
 interface ComboboxOption<T> {
@@ -401,78 +400,11 @@ function ComboboxInner<T>(
                 shape.container,
               )}
             >
+              {open && <SelectedHighlight className={shape.bg} rect={selectedRect} />}
               {open && (
-                <AnimatePresence>
-                  {selectedRect && (
-                    <motion.div
-                      className={`pointer-events-none absolute ${shape.bg} bg-active`}
-                      initial={false}
-                      animate={{
-                        top: selectedRect.top,
-                        left: selectedRect.left,
-                        width: selectedRect.width,
-                        height: selectedRect.height,
-                        opacity: 1,
-                      }}
-                      exit={{ opacity: 0, transition: spring.moderate.exit }}
-                      transition={{
-                        ...spring.moderate,
-                        opacity: { duration: 0.08 },
-                      }}
-                    />
-                  )}
-                </AnimatePresence>
+                <HoverHighlight className={shape.bg} rect={activeRect} sessionKey={sessionId} />
               )}
-              {open && (
-                <AnimatePresence>
-                  {activeRect && (
-                    <motion.div
-                      key={sessionId}
-                      className={`pointer-events-none absolute ${shape.bg} bg-hover`}
-                      initial={{
-                        opacity: 0,
-                        top: activeRect.top,
-                        left: activeRect.left,
-                        width: activeRect.width,
-                        height: activeRect.height,
-                      }}
-                      animate={{
-                        opacity: 1,
-                        top: activeRect.top,
-                        left: activeRect.left,
-                        width: activeRect.width,
-                        height: activeRect.height,
-                      }}
-                      exit={{ opacity: 0, transition: spring.fast.exit }}
-                      transition={{
-                        ...spring.fast,
-                        opacity: { duration: 0.08 },
-                      }}
-                    />
-                  )}
-                </AnimatePresence>
-              )}
-              {open && (
-                <AnimatePresence>
-                  {focusRect && (
-                    <motion.div
-                      className={`pointer-events-none absolute z-20 ${shape.focusRing} border border-(--focus-ring)`}
-                      initial={false}
-                      animate={{
-                        left: focusRect.left - 2,
-                        top: focusRect.top - 2,
-                        width: focusRect.width + 4,
-                        height: focusRect.height + 4,
-                      }}
-                      exit={{ opacity: 0, transition: spring.fast.exit }}
-                      transition={{
-                        ...spring.fast,
-                        opacity: { duration: 0.08 },
-                      }}
-                    />
-                  )}
-                </AnimatePresence>
-              )}
+              {open && <FocusRing className={shape.focusRing} rect={focusRect} />}
               <ComboboxPrimitive.Empty
                 className={cn(
                   "text-muted-foreground px-2 py-2 empty:h-0 empty:overflow-hidden empty:p-0",

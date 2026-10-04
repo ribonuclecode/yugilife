@@ -5,11 +5,11 @@ interface BlogPostMetadataBase {
   readonly excerpt: string
 }
 
-export interface ArticlePostMetadata extends BlogPostMetadataBase {
+interface ArticlePostMetadata extends BlogPostMetadataBase {
   readonly kind: "article"
 }
 
-export interface ReleasePostMetadata extends BlogPostMetadataBase {
+interface ReleasePostMetadata extends BlogPostMetadataBase {
   readonly kind: "release"
   readonly version?: string
 }

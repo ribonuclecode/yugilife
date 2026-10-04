@@ -1,7 +1,8 @@
+import { isDrawable } from "../asset-source.js"
 import { graphemeSegments } from "../rich-text.js"
 import { validateSvgElementDefinition } from "../validation.js"
 
-import { isDrawable, throwIfAborted } from "./assets.js"
+import { SourcePromiseCache, throwIfAborted, withAbort } from "./async-resources.js"
 
 import type {
   AssetResolver,
@@ -13,11 +14,9 @@ import type { Font, FontCollection, Glyph } from "fontkit"
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg"
 const XML_NAMESPACE = "http://www.w3.org/XML/1998/namespace"
-const MAX_URL_FONT_CACHE_ENTRIES = 32
 const OUTLINED_GROUP_ATTRIBUTES = new Set(["id", "role", "transform"])
 
-const blobFontCache = new WeakMap<Blob, Promise<Font>>()
-const urlFontCache = new Map<string, Promise<Font>>()
+const outlineFontCache = new SourcePromiseCache<Font>(32)
 
 interface DomElementPair {
   natural: SVGElement
@@ -39,7 +38,6 @@ interface OutlinedTextStyle {
   fontFamily: string
   fontSize: number
   opacity: string
-  /** Preserved so outlined paths paint an outer stroke in the same order as `<text>` mode. */
   paintOrder: string
   stroke: string
   strokeLinecap: string
@@ -53,50 +51,6 @@ interface OutlinedTextStyle {
 
 interface BrowserFontkitModule {
   create(buffer: Uint8Array): Font | FontCollection
-}
-
-function abortError() {
-  return new DOMException("Rendering was aborted.", "AbortError")
-}
-
-function abortReason(signal: AbortSignal) {
-  return signal.reason instanceof Error ? signal.reason : abortError()
-}
-
-async function withAbort<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
-  throwIfAborted(signal)
-  if (!signal) return await promise
-  return await new Promise<T>((resolve, reject) => {
-    const abort = () => reject(abortReason(signal))
-    signal.addEventListener("abort", abort, { once: true })
-    void promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", abort))
-  })
-}
-
-function boundedGet<T>(cache: Map<string, T>, key: string) {
-  const value = cache.get(key)
-  if (value !== undefined) {
-    cache.delete(key)
-    cache.set(key, value)
-  }
-  return value
-}
-
-function boundedSet<T>(cache: Map<string, T>, key: string, value: T, maximum: number) {
-  cache.set(key, value)
-  if (cache.size > maximum) {
-    const oldest = cache.keys().next().value
-    if (oldest !== undefined) cache.delete(oldest)
-  }
-}
-
-function sourceCacheKey(source: string | URL) {
-  const value = source instanceof URL ? source.href : source
-  try {
-    return new URL(value, document.baseURI).href
-  } catch {
-    return value
-  }
 }
 
 async function readFontSource(source: string | URL | Blob) {
@@ -131,8 +85,6 @@ async function parseFont(source: string | URL | Blob) {
             .href
         ),
   )
-  // Fontkit's browser build accepts Uint8Array. Its DefinitelyTyped declaration retains the
-  // Node-only Buffer signature even though this code is bundled against the browser export.
   const parsed = fontkit.create(bytes)
   if ("fonts" in parsed) {
     throw new Error("Font collections are not supported for SVG text outlining.")
@@ -148,19 +100,10 @@ async function loadOutlineFont(
   if (isDrawable(source)) {
     throw new Error(`Font asset "${assetId}" must resolve to a URL string, URL, or Blob.`)
   }
-  const blob = source instanceof Blob ? source : undefined
-  const key = source instanceof Blob ? undefined : sourceCacheKey(source)
-  let promise = blob ? blobFontCache.get(blob) : key ? boundedGet(urlFontCache, key) : undefined
-  if (!promise) {
-    promise = parseFont(source)
-    if (blob) blobFontCache.set(blob, promise)
-    if (key) boundedSet(urlFontCache, key, promise, MAX_URL_FONT_CACHE_ENTRIES)
-    void promise.catch(() => {
-      if (blob && blobFontCache.get(blob) === promise) blobFontCache.delete(blob)
-      if (key && urlFontCache.get(key) === promise) urlFontCache.delete(key)
-    })
-  }
-  return await withAbort(promise, signal)
+  return await withAbort(
+    outlineFontCache.getOrCreate(source, "", () => parseFont(source)),
+    signal,
+  )
 }
 
 function createMeasurementSvg(width: number, height: number) {
@@ -371,8 +314,6 @@ function paintAttributes(style: OutlinedTextStyle, fill: string) {
     fill,
     ...(style.fillOpacity === "1" ? {} : { "fill-opacity": style.fillOpacity }),
     ...(style.opacity === "1" ? {} : { opacity: style.opacity }),
-    // Carried through verbatim: an outer stroke is a double-width stroke painted under the fill, so
-    // dropping the order here would silently thin every outlined glyph relative to `<text>` mode.
     ...(stroke && style.paintOrder && style.paintOrder !== "normal"
       ? { "paint-order": style.paintOrder }
       : {}),
@@ -460,9 +401,7 @@ async function outlineText(
     const naturalRunLength = run.naturalElement.getSubStringLength(0, run.text.length)
     const renderedRunLength = run.renderedElement.getSubStringLength(0, run.text.length)
     const browserStretch = naturalRunLength > 0 ? renderedRunLength / naturalRunLength : 1
-    // Firefox currently reports natural widths for textLength runs. Keep the browser's exact
-    // character positions where its metrics honor textLength, and reconstruct only the affected
-    // run locally when the measured and declared scales disagree.
+    // Firefox reports natural widths for textLength runs; rebuild only runs whose scale disagrees.
     const useManualTextLength =
       declaredStretch !== undefined && Math.abs(browserStretch - declaredStretch) > 0.000001
     const renderedOrigin = useManualTextLength
@@ -566,7 +505,6 @@ async function outlineDefinition(
   }
 }
 
-/** Replaces validated SVG text with glyph paths after the browser has performed final layout. */
 export async function outlineSvgText(
   elements: readonly SvgElementDefinition[],
   dimensions: Readonly<{ height: number; width: number }>,

@@ -24,18 +24,7 @@ import type {
   RichTextWarning,
 } from "../rich-text.js"
 
-/**
- * The single place a `TextStroke` becomes SVG paint. SVG has no outer-stroke primitive: a stroke
- * straddles the outline, so half of it would eat into the glyph and letters would read thinner than
- * authored. Outer alignment is therefore expressed as a double-width stroke painted *before* the
- * fill, which then covers the inner half and leaves exactly the authored visible width outside.
- *
- * Both serializations consume these attributes — `<text>` mode directly, and outlined-path export
- * through the browser's computed style — so the doubling and paint order cannot drift apart.
- *
- * Width follows the fitted font scale so an automatically shrunk line keeps its authored proportion.
- * It never feeds back into measurement: stroke is painted, never measured.
- */
+// SVG strokes straddle the outline, so an outer stroke is a double-width stroke painted under the fill.
 function strokeAttributes(stroke: TextStroke | undefined, fontScale: number) {
   if (!stroke) return {}
   const outer = (stroke.align ?? "outer") === "outer"
@@ -64,9 +53,20 @@ interface TextLayoutLine {
 }
 
 interface TextProfileLayout<Line> {
+  fits?: boolean
   lines: readonly Line[]
-  profile?: TextFitProfile | undefined
   typography: TextTypography
+}
+
+interface FitBlocks<Block> {
+  leading?: Block | undefined
+  remainder: Block
+}
+
+interface ProfileLayoutStrategy<Block, Line> {
+  blocks: (typography: TextTypography) => FitBlocks<Block>
+  lines: (block: Block, typography: TextTypography, autoScaleX: number) => readonly Line[]
+  lineWidth: ((line: Line, typography: TextTypography) => number) | undefined
 }
 
 const defaultAutoScaleXQuantifier = 0.01
@@ -97,7 +97,6 @@ function smallestQuantifiedAutoScaleX(profile: TextFitProfile, typography: TextT
   )
 }
 
-/** Finds the largest permitted scale and floors the result to the declared quantifier. */
 function largestFittingAutoScaleX(
   profile: TextFitProfile,
   typography: TextTypography,
@@ -128,6 +127,101 @@ function typographyForFitProfile(base: TextTypography, profile: TextFitProfile):
   }
 }
 
+function widestLineWidth<Line>(
+  lines: readonly Line[],
+  typography: TextTypography,
+  lineWidth: ((line: Line, typography: TextTypography) => number) | undefined,
+) {
+  return lineWidth ? Math.max(0, ...lines.map((line) => lineWidth(line, typography))) : 0
+}
+
+function layoutFitProfile<Block, Line>(
+  layer: TextLayer,
+  profile: TextFitProfile,
+  baseTypography: TextTypography,
+  strategy: ProfileLayoutStrategy<Block, Line>,
+): TextProfileLayout<Line> {
+  const typography = typographyForFitProfile(baseTypography, profile)
+  const { leading: leadingBlock, remainder } = strategy.blocks(typography)
+  const preferredMaxLines = typography.fitBlocks?.leading.preferredMaxLines ?? 1
+  const leadingScale = leadingBlock
+    ? (largestFittingAutoScaleX(
+        profile,
+        typography,
+        (scale) => strategy.lines(leadingBlock, typography, scale).length <= preferredMaxLines,
+      ) ?? 1)
+    : 1
+  const leading = leadingBlock ? strategy.lines(leadingBlock, typography, leadingScale) : []
+  const linesAt = (scale: number) => [...leading, ...strategy.lines(remainder, typography, scale)]
+  const fitsAt = (scale: number) => {
+    const lines = linesAt(scale)
+    if (!linesFitProfile(lines.length, profile, typography)) return false
+    return !(
+      layer.format === "type-list" &&
+      strategy.lineWidth &&
+      typography.maxWidth !== undefined &&
+      widestLineWidth(lines, typography, strategy.lineWidth) > typography.maxWidth
+    )
+  }
+  const fittingScale = largestFittingAutoScaleX(profile, typography, fitsAt)
+  return {
+    fits: fittingScale !== undefined,
+    lines: linesAt(fittingScale ?? smallestQuantifiedAutoScaleX(profile, typography)),
+    typography,
+  }
+}
+
+function selectTextLayout<Block, Line>(
+  layer: TextLayer,
+  baseTypography: TextTypography,
+  fitProfileId: string | undefined,
+  strategy: ProfileLayoutStrategy<Block, Line>,
+  unfitted: () => readonly Line[],
+): TextProfileLayout<Line> {
+  const profiles = baseTypography.fitProfiles
+  if (!profiles || profiles.length === 0) {
+    return { lines: unfitted(), typography: baseTypography }
+  }
+  const layoutFor = (profile: TextFitProfile) =>
+    layoutFitProfile(layer, profile, baseTypography, strategy)
+  const pinned = fitProfileId ? profiles.find((profile) => profile.id === fitProfileId) : undefined
+  if (pinned) return layoutFor(pinned)
+  let candidate: TextProfileLayout<Line> | undefined
+  for (const profile of profiles) {
+    candidate = layoutFor(profile)
+    if (candidate.fits) return candidate
+  }
+  return candidate as TextProfileLayout<Line>
+}
+
+function textRootAttributes(
+  layer: TextLayer,
+  typography: TextTypography,
+  fontScale: number,
+  preserveSpace: boolean,
+) {
+  const attributes: Record<string, string | number> = {
+    fill: typography.fill,
+    "font-family": typography.fontFamily,
+    "font-size": typography.fontSize * fontScale,
+    ...strokeAttributes(typography.stroke, fontScale),
+    "white-space": "pre",
+    ...(preserveSpace ? { "xml:space": "preserve" } : {}),
+    x: layer.position.x,
+    y: layer.position.y,
+  }
+  if (typography.textAnchor) attributes["text-anchor"] = typography.textAnchor
+  if (typography.verticalAnchor === "top") {
+    attributes["dominant-baseline"] = "text-before-edge"
+  }
+  if (typography.fontStyle) attributes["font-style"] = typography.fontStyle
+  if (typography.fontWeight) attributes["font-weight"] = typography.fontWeight
+  if (typography.letterSpacing !== undefined) {
+    attributes["letter-spacing"] = typography.letterSpacing * fontScale
+  }
+  return attributes
+}
+
 function linesFitProfile(lineCount: number, profile: TextFitProfile, typography: TextTypography) {
   if (profile.maxLines !== undefined && lineCount > profile.maxLines) return false
   if (typography.maxHeight !== undefined) {
@@ -146,8 +240,7 @@ function wrapLine(
 ) {
   if (line === "" || measureText(line, typography) <= maxWidth) return [line]
 
-  // Keep whitespace attached to the preceding word. This preserves authored spaces on either side
-  // of a soft wrap, including two or more consecutive spaces.
+  // Whitespace stays attached to the preceding word so authored spaces survive soft wraps.
   const tokens = line.match(/\S+(?:[^\S\r\n]+|$)|[^\S\r\n]+/gu) ?? [line]
   const wrapped: string[] = []
   let current = ""
@@ -555,14 +648,6 @@ function richTokenRuns(tokens: readonly RichTextToken[]) {
   return runs
 }
 
-/**
- * Returns a local horizontal compression ratio for each contiguous, automatically fitted nowrap
- * run. Explicit horizontal scale values already define their own width and are excluded from this
- * pass.
- * A nowrap run is kept at its authored font size and receives SVG textLength instead of shrinking
- * the parent text element. nocompress runs reserve their natural width and are never included in
- * the ratio.
- */
 function nowrapCompressionRatios(
   runs: readonly RichTokenRun[],
   maxWidth: number | undefined,
@@ -588,9 +673,6 @@ function nowrapCompressionRatios(
 
   const fixedWidth = lineWidth - compressibleWidth
   const availableWidth = maxWidth - fixedWidth
-  // If fixed content already overflows, this is the best possible horizontal fit while retaining
-  // the fixed content's authored width. Normal wrapping handles the common case before reaching
-  // this fallback.
   const ratio = Math.min(
     1,
     Math.max(0.01, availableWidth > 0 ? availableWidth / compressibleWidth : maxWidth / lineWidth),
@@ -928,85 +1010,31 @@ function createRichTextElement(
   fitProfileId: string | undefined,
   baseTypography: TextTypography,
 ) {
-  const profiles = baseTypography.fitProfiles
   const hasValidFitBlockSplit = hasLeadingAuthoredLineFitSplit(document)
-  const layoutForProfile = (
-    profile: TextFitProfile,
-  ): TextProfileLayout<RichLine> & {
-    fits: boolean
-  } => {
-    const typography = typographyForFitProfile(baseTypography, profile)
-    const paragraphs = splitRichParagraphs(richTokens(document, typography))
-    const blocks = splitRichFitBlocks(hasValidFitBlockSplit, paragraphs, typography)
-    const preferredMaxLines = typography.fitBlocks?.leading.preferredMaxLines ?? 1
-    const leadingScale = blocks.leading
-      ? (largestFittingAutoScaleX(
-          profile,
+  const lineWidth = measureText
+    ? (line: RichLine) => richLineWidth(line.tokens, measureText, line.autoScaleX)
+    : undefined
+  const layout = selectTextLayout(
+    layer,
+    baseTypography,
+    fitProfileId,
+    {
+      blocks: (typography) =>
+        splitRichFitBlocks(
+          hasValidFitBlockSplit,
+          splitRichParagraphs(richTokens(document, typography)),
           typography,
-          (scale) =>
-            richLinesForParagraphs(blocks.leading ?? [], typography, measureText, scale).length <=
-            preferredMaxLines,
-        ) ?? 1)
-      : 1
-    const leading = blocks.leading
-      ? richLinesForParagraphs(blocks.leading, typography, measureText, leadingScale)
-      : ([] as const)
-    const remainderAt = (scale: number) =>
-      richLinesForParagraphs(blocks.remainder, typography, measureText, scale)
-    const fitsAt = (scale: number) => {
-      const lines = [...leading, ...remainderAt(scale)]
-      if (!linesFitProfile(lines.length, profile, typography)) return false
-      if (layer.format === "type-list" && measureText && typography.maxWidth !== undefined) {
-        const widestLine = Math.max(
-          0,
-          ...lines.map((line) => richLineWidth(line.tokens, measureText, line.autoScaleX)),
-        )
-        if (widestLine > typography.maxWidth) return false
-      }
-      return true
-    }
-    const fittingScale = largestFittingAutoScaleX(profile, typography, fitsAt)
-    const remainderScale = fittingScale ?? smallestQuantifiedAutoScaleX(profile, typography)
-    return {
-      fits: fittingScale !== undefined,
-      lines: [...leading, ...remainderAt(remainderScale)],
-      profile,
-      typography,
-    }
-  }
-
-  let layout: TextProfileLayout<RichLine>
-  if (profiles && profiles.length > 0) {
-    const pinned = fitProfileId
-      ? profiles.find((profile) => profile.id === fitProfileId)
-      : undefined
-    if (pinned) {
-      layout = layoutForProfile(pinned)
-    } else {
-      let fallback: TextProfileLayout<RichLine> | undefined
-      let accepted: TextProfileLayout<RichLine> | undefined
-      for (const profile of profiles) {
-        const candidate = layoutForProfile(profile)
-        fallback = candidate
-        if (candidate.fits) {
-          accepted = candidate
-          break
-        }
-      }
-      layout = accepted ?? (fallback as TextProfileLayout<RichLine>)
-    }
-  } else {
-    layout = {
-      lines: richLines(document, baseTypography, measureText),
-      typography: baseTypography,
-    }
-  }
+        ),
+      lines: (paragraphs, typography, scale) =>
+        richLinesForParagraphs(paragraphs, typography, measureText, scale),
+      lineWidth,
+    },
+    () => richLines(document, baseTypography, measureText),
+  )
 
   const typography = layout.typography
   const lines = layout.lines
-  const widestLine = measureText
-    ? Math.max(0, ...lines.map((line) => richLineWidth(line.tokens, measureText, line.autoScaleX)))
-    : 0
+  const widestLine = widestLineWidth(lines, typography, lineWidth)
   const hasNocompress = lines.some((line) => line.tokens.some((token) => token.style.nocompress))
   const hasNowrap = lines.some((line) => line.tokens.some((token) => token.style.nowrap))
   const hasCustomCompression = lines.some((line) =>
@@ -1016,7 +1044,7 @@ function createRichTextElement(
     typography.maxWidth && widestLine > typography.maxWidth ? typography.maxWidth / widestLine : 1
   const minimumScale = typography.minFontSize ? typography.minFontSize / typography.fontSize : 0
   const fontScale =
-    profiles || hasNocompress || hasNowrap || hasCustomCompression
+    baseTypography.fitProfiles || hasNocompress || hasNowrap || hasCustomCompression
       ? 1
       : typography.fit === "scale-x"
         ? 1
@@ -1024,24 +1052,7 @@ function createRichTextElement(
   const fittedFontSize = typography.fontSize * fontScale
   const fittedTypography = { ...typography, fontSize: fittedFontSize }
   const fittedLines = scaleRichLines(lines, fontScale)
-  const attributes: Record<string, string | number> = {
-    fill: typography.fill,
-    "font-family": typography.fontFamily,
-    "font-size": fittedFontSize,
-    ...strokeAttributes(typography.stroke, fontScale),
-    "white-space": "pre",
-    x: layer.position.x,
-    y: layer.position.y,
-  }
-  if (typography.textAnchor) attributes["text-anchor"] = typography.textAnchor
-  if (typography.verticalAnchor === "top") {
-    attributes["dominant-baseline"] = "text-before-edge"
-  }
-  if (typography.fontStyle) attributes["font-style"] = typography.fontStyle
-  if (typography.fontWeight) attributes["font-weight"] = typography.fontWeight
-  if (typography.letterSpacing !== undefined) {
-    attributes["letter-spacing"] = typography.letterSpacing * fontScale
-  }
+  const attributes = textRootAttributes(layer, typography, fontScale, false)
 
   const lineHeight = (typography.lineHeight ?? typography.fontSize) * fontScale
   const children: SvgElementDefinition[] = []
@@ -1060,9 +1071,6 @@ function createRichTextElement(
     if (alignment === "center") lineAttributes["text-anchor"] = "middle"
     if (alignment === "right") lineAttributes["text-anchor"] = "end"
     if (alignment === "left" || alignment === "justify") lineAttributes["text-anchor"] = "start"
-    // Inline alignment is authoritative. Without an inline override, use the template's
-    // justification policy for soft-wrapped non-final lines. Compression only changes the
-    // measured width of its own run and must not disable line-level justification.
     const isJustified =
       explicitAlignment !== undefined
         ? explicitAlignment === "justify"
@@ -1174,107 +1182,30 @@ function createPlainTextElement(
     })
   }
 
-  const layoutForProfile = (
-    profile: TextFitProfile,
-  ): TextProfileLayout<TextLayoutLine> & {
-    fits: boolean
-  } => {
-    const typography = typographyForFitProfile(baseTypography, profile)
-    const preferredMaxLines = baseTypography.fitBlocks?.leading.preferredMaxLines ?? 1
-    const leadingScale = blocks.leading
-      ? (largestFittingAutoScaleX(
-          profile,
-          typography,
-          (scale) =>
-            wrappedLines(blocks.leading ?? [], typography, scale).length <= preferredMaxLines,
-        ) ?? 1)
-      : 1
-    const leading = blocks.leading
-      ? wrappedLines(blocks.leading, typography, leadingScale)
-      : ([] as const)
-    const remainderAt = (scale: number) => wrappedLines(blocks.remainder, typography, scale)
-    const fitsAt = (scale: number) => {
-      const remainder = remainderAt(scale)
-      const lines = [...leading, ...remainder]
-      if (!linesFitProfile(lines.length, profile, typography)) return false
-      if (layer.format === "type-list" && measureText && typography.maxWidth !== undefined) {
-        const widestLine = Math.max(
-          0,
-          ...lines.map((line) => measureText(line.text, typography) * line.autoScaleX),
-        )
-        if (widestLine > typography.maxWidth) return false
-      }
-      return true
-    }
-    const fittingScale = largestFittingAutoScaleX(profile, typography, fitsAt)
-    const remainderScale = fittingScale ?? smallestQuantifiedAutoScaleX(profile, typography)
-    return {
-      fits: fittingScale !== undefined,
-      lines: [...leading, ...remainderAt(remainderScale)],
-      profile,
-      typography,
-    }
-  }
-
-  const profiles = baseTypography.fitProfiles
-  let layout: TextProfileLayout<TextLayoutLine>
-  if (profiles && profiles.length > 0) {
-    const pinned = fitProfileId
-      ? profiles.find((profile) => profile.id === fitProfileId)
-      : undefined
-    if (pinned) {
-      layout = layoutForProfile(pinned)
-    } else {
-      let fallback: TextProfileLayout<TextLayoutLine> | undefined
-      let accepted: TextProfileLayout<TextLayoutLine> | undefined
-      for (const profile of profiles) {
-        const candidate = layoutForProfile(profile)
-        fallback = candidate
-        if (candidate.fits) {
-          accepted = candidate
-          break
-        }
-      }
-      layout = accepted ?? (fallback as TextProfileLayout<TextLayoutLine>)
-    }
-  } else {
-    layout = {
-      lines: wrappedLines(source, baseTypography, 1),
-      typography: baseTypography,
-    }
-  }
-
+  const lineWidth = measureText
+    ? (line: TextLayoutLine, typography: TextTypography) =>
+        measureText(line.text, typography) * line.autoScaleX
+    : undefined
+  const layout = selectTextLayout(
+    layer,
+    baseTypography,
+    fitProfileId,
+    { blocks: () => blocks, lines: wrappedLines, lineWidth },
+    () => wrappedLines(source, baseTypography, 1),
+  )
   const typography = layout.typography
   const lines = layout.lines
-  const widestLine = measureText
-    ? Math.max(0, ...lines.map((line) => measureText(line.text, typography) * line.autoScaleX))
-    : 0
+  const widestLine = widestLineWidth(lines, typography, lineWidth)
   const measuredScale =
     typography.maxWidth && widestLine > typography.maxWidth ? typography.maxWidth / widestLine : 1
   const minimumScale = typography.minFontSize ? typography.minFontSize / typography.fontSize : 0
   const fontScale =
-    profiles || typography.fit === "scale-x" ? 1 : Math.max(measuredScale, minimumScale)
+    baseTypography.fitProfiles || typography.fit === "scale-x"
+      ? 1
+      : Math.max(measuredScale, minimumScale)
   const fittedFontSize = typography.fontSize * fontScale
   const fittedTypography = { ...typography, fontSize: fittedFontSize }
-  const attributes: Record<string, string | number> = {
-    fill: typography.fill,
-    "font-family": typography.fontFamily,
-    "font-size": fittedFontSize,
-    ...strokeAttributes(typography.stroke, fontScale),
-    "white-space": "pre",
-    "xml:space": "preserve",
-    x: layer.position.x,
-    y: layer.position.y,
-  }
-  if (typography.textAnchor) attributes["text-anchor"] = typography.textAnchor
-  if (typography.verticalAnchor === "top") {
-    attributes["dominant-baseline"] = "text-before-edge"
-  }
-  if (typography.fontStyle) attributes["font-style"] = typography.fontStyle
-  if (typography.fontWeight) attributes["font-weight"] = typography.fontWeight
-  if (typography.letterSpacing !== undefined) {
-    attributes["letter-spacing"] = typography.letterSpacing * fontScale
-  }
+  const attributes = textRootAttributes(layer, typography, fontScale, true)
 
   const renderedLineScale = (line: TextLayoutLine) =>
     typography.fit === "scale-x" ? line.autoScaleX * measuredScale : line.autoScaleX

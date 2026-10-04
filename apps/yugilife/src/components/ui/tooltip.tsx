@@ -13,52 +13,16 @@ import { cn } from "@/lib/utils"
 
 import type { ComponentPropsWithoutRef, ReactElement, ReactNode, Ref } from "react"
 
-// ---------------------------------------------------------------------------
-// Portal container context
-// ---------------------------------------------------------------------------
-
-const TooltipPortalContainerContext = createContext<HTMLElement | null>(null)
-
-function TooltipPortalContainer({
-  value,
-  children,
-}: {
-  value: HTMLElement | null
-  children: ReactNode
-}) {
-  return (
-    <TooltipPortalContainerContext.Provider value={value}>
-      {children}
-    </TooltipPortalContainerContext.Provider>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Provider
-// ---------------------------------------------------------------------------
-
 const DEFAULT_DELAY = 200
 
-// Tracks whether an app-level <TooltipProvider> is above us. Each Tooltip
-// only wraps itself in a local primitive Provider when there isn't one —
-// a per-instance Provider would defeat cross-tooltip skip-delay grouping
-// (moving between adjacent tooltips would re-wait the full delay). Radix's
-// Root throws without a Provider, so the local fallback can't be dropped.
 const TooltipGroupContext = createContext(false)
 
 interface TooltipProviderProps {
   children: ReactNode
-  /** Hover delay before tooltips open, in ms. Defaults to 200. */
   delayDuration?: number
-  /** After a tooltip closes, adjacent tooltips opened within this window
-   *  skip the hover delay, in ms. Defaults to 300. */
   skipDelayDuration?: number
 }
 
-/** Groups descendant Tooltips so that once one opens, moving to an adjacent
- *  trigger shows its tooltip instantly instead of re-waiting the full delay.
- *  Wrap once at the app (or section) level; bare Tooltips still work without
- *  it via a per-instance fallback. */
 function TooltipProvider({
   children,
   delayDuration = DEFAULT_DELAY,
@@ -76,16 +40,8 @@ function TooltipProvider({
   )
 }
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 type TooltipSide = "top" | "right" | "bottom" | "left"
 
-/** Anything a parent hands the Tooltip is meant for its trigger, so those props are forwarded to
- *  the child rather than dropped. This is what lets a Tooltip sit inside an `asChild` parent such
- *  as a DialogTrigger: without it the parent's onClick lands on the Tooltip and never reaches the
- *  button, and the control silently does nothing. */
 interface TooltipProps extends Omit<
   ComponentPropsWithoutRef<"button">,
   "children" | "className" | "content"
@@ -94,21 +50,12 @@ interface TooltipProps extends Omit<
   children: ReactElement
   side?: TooltipSide
   sideOffset?: number
-  /** Hover delay before this tooltip opens, in ms. Defaults to 200, or to the
-   *  ambient TooltipProvider's delayDuration when one is present. */
   delayDuration?: number
-  /** Classes for the tooltip bubble itself, never the trigger. */
   className?: string
-  /** When true, forces the tooltip open. When false, forces it closed. When undefined, uses default hover/focus behavior. */
   forceOpen?: boolean
-  /** Called when the tooltip's internal open state changes (before forceOpen is applied). */
   onOpenChange?: (open: boolean) => void
   ref?: Ref<HTMLButtonElement>
 }
-
-// ---------------------------------------------------------------------------
-// Animation helpers
-// ---------------------------------------------------------------------------
 
 function getSlideOffset(side: TooltipSide) {
   switch (side) {
@@ -122,10 +69,6 @@ function getSlideOffset(side: TooltipSide) {
       return { x: -4 }
   }
 }
-
-// ---------------------------------------------------------------------------
-// Tooltip
-// ---------------------------------------------------------------------------
 
 function Tooltip({
   content,
@@ -143,7 +86,6 @@ function Tooltip({
   const [mounted, setMounted] = useState(false)
   const shape = useShape()
   const sizeClasses = useSize()
-  const portalContainer = useContext(TooltipPortalContainerContext)
   const hasAmbientProvider = useContext(TooltipGroupContext)
 
   useEffect(() => {
@@ -152,10 +94,6 @@ function Tooltip({
     return () => cancelAnimationFrame(frame)
   }, [open])
 
-  // Fallback release for the deferred unmount: onAnimationComplete is the
-  // primary signal, but rAF-driven animation callbacks can stall in
-  // throttled/background tabs. The exit tween runs at spring.fast.exit, so
-  // the fallback tracks that tier.
   useEffect(() => {
     if (open) return
     const id = setTimeout(() => setMounted(false), exitFallbackMs(spring.fast))
@@ -168,10 +106,7 @@ function Tooltip({
 
   const slideOffset = getSlideOffset(side)
 
-  // An explicit delayDuration overrides the ambient provider's delay; left
-  // undefined, the Root inherits it from the nearest provider.
   const tooltipRootProps = delayDuration === undefined ? {} : { delayDuration }
-  const portalProps = portalContainer == null ? {} : { container: portalContainer }
 
   const tooltip = (
     <TooltipPrimitive.Root
@@ -182,19 +117,14 @@ function Tooltip({
         onOpenChangeProp?.(value)
       }}
     >
-      {/* Radix's Trigger uses Slot for `asChild`, so forwarded handlers merge with the child's own
-          rather than replacing them. */}
       <TooltipPrimitive.Trigger asChild {...triggerProps}>
         {children}
       </TooltipPrimitive.Trigger>
       {mounted && (
-        <TooltipPrimitive.Portal forceMount {...portalProps}>
+        <TooltipPrimitive.Portal forceMount>
           <TooltipPrimitive.Content asChild side={side} sideOffset={sideOffset} forceMount>
             <motion.div
               className={cn(
-                // Trim recenters the label; the padding bump only applies
-                // where text-box is supported, keeping the same overall
-                // height (~26px) as untrimmed browsers.
                 "bg-foreground text-background z-60 px-2 py-1",
                 sizeClasses.caption,
                 "[text-box:trim-both_cap_alphabetic] supports-[text-box:trim-both]:py-2",
@@ -219,10 +149,6 @@ function Tooltip({
     </TooltipPrimitive.Root>
   )
 
-  // Fallback: Radix's Root requires a Provider above it, so without an
-  // ambient TooltipProvider each instance carries its own with the library's
-  // default delay. Grouped skip-delay needs the shared app-level
-  // TooltipProvider.
   if (hasAmbientProvider) return tooltip
 
   return (
@@ -232,5 +158,5 @@ function Tooltip({
   )
 }
 
-export { Tooltip, TooltipPortalContainer, TooltipProvider }
+export { Tooltip, TooltipProvider }
 export type { TooltipProps, TooltipProviderProps, TooltipSide }

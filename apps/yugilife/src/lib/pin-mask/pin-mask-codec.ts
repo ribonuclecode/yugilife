@@ -1,4 +1,3 @@
-/** Worker-only encoding: preserve the existing opaque grayscale manual-mask format. */
 export async function encodePinMask(mask: Uint8Array, width: number, height: number) {
   if (mask.length !== width * height) throw new Error("The pin mask dimensions are invalid.")
   const canvas = new OffscreenCanvas(width, height)

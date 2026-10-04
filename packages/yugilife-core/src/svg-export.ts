@@ -59,11 +59,6 @@ function flattenRasterRun(
   return { canvas, kind: "raster" }
 }
 
-/**
- * Flattens only contiguous raster runs for export. Mask isolation may split one ordered raster
- * run into several full-card canvases; source-over compositing restores that run as one PNG without
- * moving raster content across a vector segment.
- */
 function flattenRasterSegments(
   template: CardTemplate,
   renderSegments: readonly RenderSegment[],
@@ -120,8 +115,6 @@ export function serializeCardSvg(
   const content = flattenRasterSegments(template, renderSegments)
     .map((segment) => {
       if (segment.kind === "vector") return segment.elements.map(serializeSvgElement).join("")
-      // Raster planes are transparent intermediates, so SVG embeds each flattened run losslessly as
-      // PNG. Raster runs separated by vector content remain separate to preserve layer order.
       const image = segment.canvas.toDataURL("image/png")
       return `<image href="${escapeXml(image)}" x="0" y="0" width="${width}" height="${height}"/>`
     })

@@ -10,7 +10,7 @@ import yugilifeIsNowOpenSourceMetadata from "./yugilife-is-now-open-source/metad
 import type { BlogPostMetadata } from "./types"
 import type { AnchorHTMLAttributes, ComponentType } from "react"
 
-export interface BlogPostComponentProps {
+interface BlogPostComponentProps {
   readonly components?: {
     readonly a?: ComponentType<AnchorHTMLAttributes<HTMLAnchorElement>>
   }
@@ -58,8 +58,8 @@ function validatePosts(posts: readonly BlogPost[]) {
 
 validatePosts(sourcePosts)
 
-export const blogPosts = [...sourcePosts].sort((left, right) => right.date.localeCompare(left.date))
-export const blogPageSize = 10
+const blogPosts = [...sourcePosts].sort((left, right) => right.date.localeCompare(left.date))
+const blogPageSize = 10
 
 export function getBlogPage(pageNumber: number) {
   const pageCount = Math.max(1, Math.ceil(blogPosts.length / blogPageSize))
@@ -83,7 +83,6 @@ export function getAdjacentBlogPosts(slug: string) {
   if (index < 0) return { next: undefined, previous: undefined }
 
   return {
-    // The list is newest first, so the previous post is the older one.
     next: index === 0 ? undefined : blogPosts[index - 1],
     previous: index === blogPosts.length - 1 ? undefined : blogPosts[index + 1],
   }

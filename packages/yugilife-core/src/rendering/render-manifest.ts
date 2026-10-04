@@ -1,7 +1,8 @@
 import { rasterizeCardSvgToImage } from "../raster-export.js"
 import { serializeCardSvg, serializeSvgElement } from "../svg-export.js"
 
-import { loadDrawable, throwIfAborted } from "./assets.js"
+import { loadDrawable } from "./assets.js"
+import { throwIfAborted } from "./async-resources.js"
 
 import type {
   CardDimensions,
@@ -172,7 +173,6 @@ function alphaChannel(
   })
 }
 
-/** Builds exact per-layer final-visible alpha without changing the card's coalesced render planes. */
 export async function createRenderManifest(
   captures: readonly CapturedRenderedElement[],
   template: CardTemplate,

@@ -97,7 +97,6 @@ const documentMigrations = new Map<number, DocumentMigration>([
   [21, moveLegacyArtworkTransformMode],
 ])
 
-/** Upgrades only the editor document schema; template content is handled by a separate pipeline. */
 export function migrateEditorDocumentSchema(
   persisted: unknown,
   sourceVersion: number,

@@ -1,25 +1,13 @@
-import { access } from "node:fs/promises"
-
 import {
+  assertChromiumInstalled,
   BrowserHost,
-  getChromiumExecutablePath,
   getPlaywrightVersion,
   readCoreVersion,
 } from "../runtime/browser-host.js"
-import { CliError } from "../runtime/errors.js"
 import { cliVersion } from "../version.js"
 
 export async function runDoctor(signal?: AbortSignal) {
-  const executablePath = getChromiumExecutablePath()
-  try {
-    await access(executablePath)
-  } catch (error) {
-    throw new CliError(
-      "BROWSER_UNAVAILABLE",
-      `Required YugiLife Chromium build is not installed at "${executablePath}".\nRun:\n  pnpm setup:browsers`,
-      { cause: error },
-    )
-  }
+  const executablePath = await assertChromiumInstalled()
 
   const host = new BrowserHost()
   try {

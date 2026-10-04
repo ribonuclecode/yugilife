@@ -18,13 +18,9 @@ interface SwitchProps extends HTMLAttributes<HTMLDivElement> {
   onToggle: () => void
   disabled?: boolean
   thumbTransition?: Transition
-  /** Pins the switch to one step of the size ladder (see /docs/sizes).
-   *  Omitted, it follows the surrounding SizeProvider. */
   size?: SizeVariant
 }
 
-// Track/thumb geometry per ladder step. The hover pill-extend and press
-// squash scale down with the thumb so the compact switch keeps the same feel.
 const METRICS = {
   default: {
     trackWidth: 34,
@@ -70,7 +66,6 @@ const Switch = forwardRef<HTMLDivElement, SwitchProps>(
     const m = METRICS[sizeClasses.variant]
     const thumbTravel = m.trackWidth - m.thumbSize - THUMB_OFFSET * 2
 
-    // Drag refs (not state to avoid re-renders during drag)
     const dragging = useRef(false)
     const didDrag = useRef(false)
     const pointerStart = useRef<{
@@ -78,14 +73,12 @@ const Switch = forwardRef<HTMLDivElement, SwitchProps>(
       originX: number
     } | null>(null)
 
-    // Motion value for thumb x-axis
     const motionX = useMotionValue(checked ? THUMB_OFFSET + thumbTravel : THUMB_OFFSET)
 
     useEffect(() => {
       hasMounted.current = true
     }, [])
 
-    // Compute thumb shape
     const thumbWidth = pressed
       ? m.thumbSize + m.pressExtend
       : hovered
@@ -96,7 +89,6 @@ const Switch = forwardRef<HTMLDivElement, SwitchProps>(
     const extraWidth = thumbWidth - m.thumbSize
     const thumbX = checked ? THUMB_OFFSET + thumbTravel - extraWidth : THUMB_OFFSET
 
-    // Sync motionX when thumbX changes (hover/press/checked) and not dragging
     useEffect(() => {
       if (dragging.current) return
       if (!hasMounted.current) {
@@ -105,8 +97,6 @@ const Switch = forwardRef<HTMLDivElement, SwitchProps>(
         animate(motionX, thumbX, thumbTransition ?? spring.moderate)
       }
     }, [thumbX, motionX, thumbTransition])
-
-    // --- Pointer handlers ---
 
     const handlePointerDown = useCallback(
       (e: React.PointerEvent<HTMLDivElement>) => {
@@ -162,7 +152,6 @@ const Switch = forwardRef<HTMLDivElement, SwitchProps>(
         if (shouldBeOn !== checked) {
           onToggle()
         } else {
-          // Snap back to current resting position (un-pressed)
           const snapTarget = checked ? THUMB_OFFSET + thumbTravel : THUMB_OFFSET
           animate(motionX, snapTarget, thumbTransition ?? spring.moderate)
         }
@@ -181,7 +170,6 @@ const Switch = forwardRef<HTMLDivElement, SwitchProps>(
 
       if (dragging.current) {
         dragging.current = false
-        // Gesture cancelled by the system — snap back without toggling
         const snapTarget = checked ? THUMB_OFFSET + thumbTravel : THUMB_OFFSET
         animate(motionX, snapTarget, thumbTransition ?? spring.moderate)
       }
@@ -215,7 +203,6 @@ const Switch = forwardRef<HTMLDivElement, SwitchProps>(
         {...props}
         data-cursor="drag"
       >
-        {/* Switch */}
         <SwitchPrimitive.Root
           checked={checked}
           aria-labelledby={labelId}
@@ -262,12 +249,9 @@ const Switch = forwardRef<HTMLDivElement, SwitchProps>(
           ></SwitchPrimitive.Thumb>
         </SwitchPrimitive.Root>
 
-        {/* Label */}
         <span
           id={labelId}
           className={cn(
-            // text-box trim recenters the letterforms against the track; the
-            // track is taller than the label, so layout doesn't change.
             hideLabel
               ? "sr-only"
               : "transition-[color] duration-80 [text-box:trim-both_cap_alphabetic]",

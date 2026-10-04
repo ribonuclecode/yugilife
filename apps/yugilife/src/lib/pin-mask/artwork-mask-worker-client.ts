@@ -12,7 +12,6 @@ interface Job {
   reject: (reason: Error) => void
 }
 
-/** At most one running job and one queued intent; no decoding or pixel allocation on the caller. */
 export class ArtworkMaskWorkerClient {
   readonly #worker = new Worker(new URL("./artwork-mask-worker.ts", import.meta.url), {
     type: "module",

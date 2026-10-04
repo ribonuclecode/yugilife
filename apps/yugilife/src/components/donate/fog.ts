@@ -2,14 +2,7 @@ import { cancelFrame, frame } from "framer-motion"
 
 import { prefersReducedMotion } from "./motion"
 
-/**
- * The background of the screen the heart opens into: a white sky settling into pink fog along a
- * U-shaped curve. The puffs are baked into two oversized sheets once, and the only per-frame work
- * is two drawImage calls onto a surface at most 256px on its long side, which CSS then blows up.
- * Fog has no edges, so nothing shows.
- */
 export interface Fog {
-  /** Sizes the fog to its canvas if needed and paints a frame before anything fades it up. */
   start(): void
   stop(): void
   dispose(): void
@@ -45,7 +38,6 @@ export function createFog(canvas: HTMLCanvasElement): Fog {
   const random = () => ((seed = (seed * 1664525 + 1013904223) >>> 0), seed / 4294967296)
   const range = (from: number, to: number) => from + random() * (to - from)
 
-  // each puff is a soft, internally textured volume, not a flat circle
   const sprites = SPRITE_COLORS.map(([r, g, b]) => {
     const texture = document.createElement("canvas")
     texture.width = texture.height = 256
@@ -72,14 +64,11 @@ export function createFog(canvas: HTMLCanvasElement): Fog {
     const rect = canvas.getBoundingClientRect()
     width = Math.max(1, Math.round(rect.width))
     height = Math.max(1, Math.round(rect.height))
-    // fog has no sharp edges, so a small backing surface looks the same once enlarged, without
-    // paying for millions of high-DPI pixels
     ratio = Math.min(1, 256 / Math.max(width, height))
     canvas.width = Math.round(width * ratio)
     canvas.height = Math.round(height * ratio)
     context!.setTransform(ratio, 0, 0, ratio, 0, 0)
 
-    // a curved colour field: the pink stands at the sides and dips in the centre
     background.width = background.height = 400
     const paint = background.getContext("2d")!
     const field = paint.createImageData(400, 400)
@@ -111,7 +100,6 @@ export function createFog(canvas: HTMLCanvasElement): Fog {
     skyPaint.fillRect(0, 0, veil.width, veil.height * 0.42)
   }
 
-  /** Bake the puffs into two oversized sheets; only the sheets move afterwards. */
   function populate() {
     layers = []
     seed = 827
@@ -143,7 +131,6 @@ export function createFog(canvas: HTMLCanvasElement): Fog {
     context!.drawImage(base, 0, 0, width, height)
     layers.forEach((layer, i) => {
       const phase = elapsed * (0.48 + i * 0.085) + i * 2.1
-      // counter-drifting sheets gently swell without additional draw calls
       const swell = 1.07 + (Math.sin(phase * 0.72) + 1) * 0.055
       const span = 1.16 * swell
       const x = width * ((1 - span) / 2 + Math.sin(phase) * 0.09)
@@ -157,15 +144,15 @@ export function createFog(canvas: HTMLCanvasElement): Fog {
 
   const tick = ({ timestamp }: { timestamp: number }) => {
     const elapsed = timestamp / 1000
-    if (!running || prefersReducedMotion()) return // reduced motion gets one static frame
-    if (elapsed - lastDrawn < 1 / FPS) return // sleep between updates
+    if (!running || prefersReducedMotion()) return
+    if (elapsed - lastDrawn < 1 / FPS) return
     lastDrawn = elapsed
     draw(elapsed)
   }
 
   function start() {
     const rect = canvas.getBoundingClientRect()
-    if (rect.width === 0) return // still hidden; nothing to size to
+    if (rect.width === 0) return
     const key = `${Math.round(rect.width)}x${Math.round(rect.height)}`
     if (key !== sizedFor) {
       sizedFor = key
@@ -173,7 +160,7 @@ export function createFog(canvas: HTMLCanvasElement): Fog {
       populate()
     }
     lastDrawn = -1
-    draw(performance.now() / 1000) // painted before it is faded up
+    draw(performance.now() / 1000)
     if (!running) {
       running = true
       frame.update(tick, true)

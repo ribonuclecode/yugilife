@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises"
 import path from "node:path"
 
 import { CliError } from "./errors.js"
+import { mediaTypeFor } from "./media-types.js"
 import { resolveCliTemplate } from "./template-store.js"
 
 import type {
@@ -10,6 +11,26 @@ import type {
   SerializedRenderRequest,
   SvgTextMode,
 } from "./protocol.js"
+
+export interface RenderRequestOptions {
+  readonly backgroundColor?: string | undefined
+  readonly height?: number | undefined
+  readonly quality?: number | undefined
+  readonly scale?: number | undefined
+  readonly templateReference?: string | undefined
+  readonly textMode?: SvgTextMode | undefined
+  readonly title?: string | undefined
+  readonly useDefaultTemplate?: boolean | undefined
+  readonly width?: number | undefined
+}
+
+type DefinedProperties<T> = { [Key in keyof T]?: Exclude<T[Key], undefined> }
+
+function definedProperties<T extends object>(value: T): DefinedProperties<T> {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, entry]) => entry !== undefined),
+  ) as DefinedProperties<T>
+}
 
 interface RawRenderInput {
   readonly card: Readonly<Record<string, unknown>>
@@ -24,38 +45,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function invalidInput(message: string, options?: ErrorOptions) {
   return new CliError("INPUT_INVALID", message, options)
-}
-
-function mimeTypeFor(filePath: string) {
-  const extension = path.extname(filePath).toLowerCase()
-  switch (extension) {
-    case ".avif":
-      return "image/avif"
-    case ".bmp":
-      return "image/bmp"
-    case ".gif":
-      return "image/gif"
-    case ".jpe":
-    case ".jpeg":
-    case ".jpg":
-      return "image/jpeg"
-    case ".svg":
-      return "image/svg+xml"
-    case ".otf":
-      return "font/otf"
-    case ".ttf":
-      return "font/ttf"
-    case ".woff":
-      return "font/woff"
-    case ".woff2":
-      return "font/woff2"
-    case ".webp":
-      return "image/webp"
-    case ".png":
-      return "image/png"
-    default:
-      return "application/octet-stream"
-  }
 }
 
 function resolveFilePath(inputDirectory: string, reference: string, key: string) {
@@ -87,7 +76,7 @@ async function readFileAsDataUrl(
   if (contents.byteLength === 0) {
     throw invalidInput(`File "${reference}" for "${key}" is empty.`)
   }
-  return `data:${mimeTypeFor(filePath)};base64,${contents.toString("base64")}`
+  return `data:${mediaTypeFor(filePath)};base64,${contents.toString("base64")}`
 }
 
 function parseInput(value: unknown, inputPath: string): RawRenderInput {
@@ -108,11 +97,11 @@ function parseInput(value: unknown, inputPath: string): RawRenderInput {
   }
   return {
     card: value.card,
-    ...(value.files === undefined ? {} : { files: value.files }),
-    ...(value.presentationOverrides === undefined
-      ? {}
-      : { presentationOverrides: value.presentationOverrides }),
-    ...(value.template === undefined ? {} : { template: value.template }),
+    ...definedProperties({
+      files: value.files,
+      presentationOverrides: value.presentationOverrides,
+      template: value.template,
+    }),
   }
 }
 
@@ -137,13 +126,7 @@ function outputFormat(outputPath: string): RenderFormat {
 
 function rasterOptions(
   format: RenderFormat,
-  options: {
-    readonly backgroundColor?: string
-    readonly height?: number
-    readonly quality?: number
-    readonly scale?: number
-    readonly width?: number
-  },
+  options: RenderRequestOptions,
 ): SerializedRenderRequest["rasterOptions"] {
   const sizeEntries = [
     ["height", options.height],
@@ -188,25 +171,16 @@ function rasterOptions(
       throw invalidInput("--background must be an opaque #RGB or #RRGGBB color.")
     }
   }
-  let size: NonNullable<SerializedRenderRequest["rasterOptions"]>["size"]
-  if (sizeEntry?.[1] !== undefined) {
-    switch (sizeEntry[0]) {
-      case "height":
-        size = { height: sizeEntry[1] }
-        break
-      case "scale":
-        size = { scale: sizeEntry[1] }
-        break
-      case "width":
-        size = { width: sizeEntry[1] }
-        break
-    }
-  }
-  return {
-    ...(options.backgroundColor === undefined ? {} : { backgroundColor: options.backgroundColor }),
-    ...(options.quality === undefined ? {} : { quality: options.quality }),
-    ...(size === undefined ? {} : { size }),
-  }
+  const size = sizeEntry
+    ? ({ [sizeEntry[0]]: sizeEntry[1] } as NonNullable<
+        SerializedRenderRequest["rasterOptions"]
+      >["size"])
+    : undefined
+  return definedProperties({
+    backgroundColor: options.backgroundColor,
+    quality: options.quality,
+    size,
+  })
 }
 
 export function normalizeTextMode(value: string | undefined): SvgTextMode | undefined {
@@ -223,17 +197,7 @@ export function normalizeTextMode(value: string | undefined): SvgTextMode | unde
 export async function loadRenderRequest(
   inputPath: string,
   outputPath: string,
-  options: {
-    readonly backgroundColor?: string
-    readonly height?: number
-    readonly quality?: number
-    readonly scale?: number
-    readonly templateReference?: string
-    readonly textMode?: SvgTextMode
-    readonly title?: string
-    readonly useDefaultTemplate?: boolean
-    readonly width?: number
-  } = {},
+  options: RenderRequestOptions = {},
 ): Promise<SerializedRenderRequest> {
   const resolvedInputPath = path.resolve(inputPath)
   let inputContents: string
@@ -277,18 +241,17 @@ export async function loadRenderRequest(
   if (format !== "svg" && (options.textMode !== undefined || options.title !== undefined)) {
     throw invalidInput("--text-mode and --title can be used only with SVG output.")
   }
-  const resolvedRasterOptions = rasterOptions(format, options)
   return {
     card: input.card,
     files,
     format,
-    ...(resolvedRasterOptions === undefined ? {} : { rasterOptions: resolvedRasterOptions }),
-    ...(input.presentationOverrides === undefined
-      ? {}
-      : { presentationOverrides: input.presentationOverrides }),
     templateBundle,
-    ...(options.textMode === undefined ? {} : { textMode: options.textMode }),
-    ...(options.title === undefined ? {} : { title: options.title }),
+    ...definedProperties({
+      presentationOverrides: input.presentationOverrides,
+      rasterOptions: rasterOptions(format, options),
+      textMode: options.textMode,
+      title: options.title,
+    }),
   }
 }
 

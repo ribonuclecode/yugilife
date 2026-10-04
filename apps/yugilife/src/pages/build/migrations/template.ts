@@ -1,37 +1,15 @@
+import { compareTemplateVersions, isTemplateVersion } from "yugilife-core"
+
 import type { EditorDocumentState } from "../editor/model/editor-document"
 
 type PersistedEditorDocument = Omit<Partial<EditorDocumentState>, "templateVersion"> & {
   templateVersion?: unknown
 }
 
-const templateVersionPattern = /^\d{4}\.\d{2}\.\d{2}(?:\.[1-9]\d*)?$/
-
 interface TemplateMigrationCheckpoint {
-  /** Applies only to documents for this stable template identity. */
   readonly templateId: string
-  /** Current published or GitHub-supported release that requires this persisted-data transform. */
   readonly releasedIn: string
   readonly migrate: (saved: PersistedEditorDocument) => PersistedEditorDocument
-}
-
-export function isTemplateVersion(value: unknown): value is string {
-  if (typeof value !== "string" || !templateVersionPattern.test(value)) return false
-  const [year, month, day] = value.split(".").map(Number)
-  if (!year || !month || !day) return false
-  const date = new Date(Date.UTC(year, month - 1, day))
-  return (
-    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
-  )
-}
-
-function compareTemplateVersions(left: string, right: string) {
-  const leftParts = left.split(".").map(Number)
-  const rightParts = right.split(".").map(Number)
-  for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index += 1) {
-    const difference = (leftParts[index] ?? 0) - (rightParts[index] ?? 0)
-    if (difference !== 0) return difference
-  }
-  return 0
 }
 
 function withoutLayerMasks(
@@ -40,10 +18,6 @@ function withoutLayerMasks(
   return Object.fromEntries(Object.entries(overrides).filter(([key]) => key !== "layerMasks"))
 }
 
-/**
- * Single direct current-release transform: removes retired Link-arrow and Pendulum layer state
- * before current validation while preserving every unrelated authored value.
- */
 function migrateSeries10CurrentRelease(saved: PersistedEditorDocument): PersistedEditorDocument {
   const layers = saved.layers
   const presentationOverrides = saved.presentationOverrides
@@ -76,8 +50,6 @@ function migrateSeries10CurrentRelease(saved: PersistedEditorDocument): Persiste
       ? {
           presentationOverrides: {
             ...withoutLayerMasks(presentationOverrides),
-            // Sparse overrides omit what they do not set, so an emptied selection drops the key
-            // instead of persisting it as an explicit `undefined`.
             ...(retainedLayerMasks && Object.keys(retainedLayerMasks).length > 0
               ? { layerMasks: retainedLayerMasks }
               : {}),
@@ -87,12 +59,6 @@ function migrateSeries10CurrentRelease(saved: PersistedEditorDocument): Persiste
   }
 }
 
-/**
- * Intentionally sparse current-release compatibility checkpoints. Local calendar versions and
- * same-day development sequences do not get entries. When the supported template advances, update
- * this checkpoint and merge all required transforms into the one current-release migration above;
- * older documents migrate directly to the current version before validation.
- */
 const templateMigrationCheckpoints: readonly TemplateMigrationCheckpoint[] = [
   {
     templateId: "card/series-10",
@@ -117,12 +83,6 @@ function applyTemplateVersionMigrations(
   )
 }
 
-/**
- * Advances an older document to the current release of the same stable template. The caller must
- * validate the migrated card, fields, layers, presets, and presentation overrides against the
- * current bundle before committing it. Numeric legacy, future, and different-template identities
- * remain unsupported.
- */
 export function migrateEditorTemplateVersion(
   saved: PersistedEditorDocument,
   current: EditorDocumentState,

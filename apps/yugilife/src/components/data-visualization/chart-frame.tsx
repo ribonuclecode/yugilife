@@ -26,16 +26,11 @@ import { DataTable } from "./data-table"
 import type { DataTableColumn } from "./data-table"
 import type { ReactNode } from "react"
 
-/**
- * Which way is good. A reader can see which mark is highest and still not know whether highest is
- * the win, so the direction is named once, in the same words on every figure.
- */
-export type ChartGoalDirection =
+type ChartGoalDirection =
   "lower" | "higher" | "lower-left" | "lower-right" | "upper-left" | "upper-right"
 
 export interface ChartGoal {
   readonly direction: ChartGoalDirection
-  /** Overrides the sentence the direction implies, for a measure with a name worth repeating. */
   readonly label?: ReactNode
 }
 
@@ -48,10 +43,6 @@ const GOAL_ARROW = {
   "upper-right": ArrowUpRight,
 } as const
 
-/**
- * A diagonal names the corner it points at rather than the journey there — which is also what the
- * shaded quarter is called on a quartered plot.
- */
 const GOAL_LABEL = {
   higher: "Higher is better",
   lower: "Lower is better",
@@ -61,7 +52,6 @@ const GOAL_LABEL = {
   "upper-right": "Top right is better",
 } as const
 
-/** The unit vector each arrow travels along, in screen space, where y counts downward. */
 const GOAL_VECTOR = {
   higher: { x: 0, y: -1 },
   lower: { x: 0, y: 1 },
@@ -72,37 +62,22 @@ const GOAL_VECTOR = {
 } as const
 
 const GOAL_ICON = 12
-/** The window the ribbon runs through: the icon plus a little air, no more. */
 const GOAL_WINDOW = 18
-/** Gap between arrows. Shorter than the window, so one is always entering as another leaves. */
 const GOAL_PITCH = 14
-/** Enough copies to fill the window at any offset, including across a diagonal's longer reach. */
 const GOAL_COPIES = 5
-/** Time to advance exactly one pitch, which is one full period of the loop. */
 const GOAL_LOOP_SECONDS = 1.1
 const GOAL_FADE = (angle: number) =>
   `linear-gradient(${angle}deg, transparent, #000 24%, #000 76%, transparent)`
 
-/**
- * The direction marker: a ribbon of arrows running the way the goal is, plus its sentence.
- *
- * The strip advances by exactly one gap per cycle, so the frame after the last is identical to the
- * first and the loop has no seam. It is clipped rather than travelling, and the window is masked
- * rather than cut so an arrow fades at an edge instead of being guillotined.
- */
-export function ChartGoalMarker({ goal }: { readonly goal: ChartGoal }) {
+function ChartGoalMarker({ goal }: { readonly goal: ChartGoal }) {
   const reduceMotion = useChartMotion()
   const [revealRef, revealed] = useChartReveal<HTMLDivElement>()
   const Arrow = GOAL_ARROW[goal.direction]
   const vector = GOAL_VECTOR[goal.direction]
   const running = revealed && !reduceMotion
 
-  // A diagonal's unit step is shorter on each axis than a straight one's, so the arrows along it
-  // are spaced by the same distance rather than half again as much.
   const length = Math.hypot(vector.x, vector.y)
   const step = { x: (vector.x / length) * GOAL_PITCH, y: (vector.y / length) * GOAL_PITCH }
-  // CSS gradient angles start at "to top" and turn clockwise, which is what the arrow's own
-  // direction becomes once the downward y is flipped.
   const fadeAngle = (Math.atan2(vector.x, -vector.y) * 180) / Math.PI
   const middle = (GOAL_COPIES - 1) / 2
 
@@ -131,8 +106,6 @@ export function ChartGoalMarker({ goal }: { readonly goal: ChartGoal }) {
               : { duration: 0 }
           }
         >
-          {/* Centred on the middle copy, so a ribbon that is not running still shows one arrow in
-              the middle of its window rather than an empty box. */}
           {Array.from({ length: GOAL_COPIES }, (_, index) => (
             <span
               className="absolute inset-0 grid place-items-center"
@@ -152,18 +125,12 @@ export function ChartGoalMarker({ goal }: { readonly goal: ChartGoal }) {
 }
 
 export interface ChartQuadrants {
-  /** Which of the four corners a point would have to reach to be a win. */
   readonly goal: "lower-left" | "lower-right" | "upper-left" | "upper-right"
-  /** Where the plot splits, in data units. Defaults to the middle of each axis. */
   readonly x?: number
   readonly y?: number
   readonly label: string
 }
 
-/**
- * Splits a plot into four and shades the corner that would be a win, which is what makes an empty
- * corner visible. Drawn under the bands and the marks so the quarters are never mistaken for one.
- */
 export function ChartQuadrantLayer({
   hideXSplit = false,
   plot,
@@ -173,7 +140,6 @@ export function ChartQuadrantLayer({
   xDomain,
   yDomain,
 }: {
-  /** Set when a budget or annotation line already stands at the split, to avoid doubling it. */
   readonly hideXSplit?: boolean
   readonly plot: {
     readonly bottom: number
@@ -206,8 +172,6 @@ export function ChartQuadrantLayer({
         x={zoneX}
         y={zoneY}
       />
-      {/* The split itself, drawn across the whole plot so all four quarters read as verdicts
-          rather than one shaded box floating in a corner. */}
       {!hideXSplit && (
         <line
           stroke="var(--chart-muted)"
@@ -228,9 +192,6 @@ export function ChartQuadrantLayer({
         y1={cutY}
         y2={cutY}
       />
-      {/* The label sits in the quarter's outer corner — the far corner of the goal, the one the
-          direction marker points at — rather than wherever there happened to be room. A quarter
-          too short to hold it is named by that marker alone. */}
       {zoneHeight >= 20 && (
         <text
           className={cn(FIGURE_TYPE.axis, "fill-muted-foreground")}
@@ -249,32 +210,16 @@ export function ChartQuadrantLayer({
 export interface ChartFrameProps {
   readonly title: string
   readonly description?: ReactNode
-  /** Which direction on this chart is the good one, stated above the plot. */
   readonly goal?: ChartGoal | undefined
-  /**
-   * The table view. Every chart ships one: it is the keyboard-free route to values a tooltip would
-   * otherwise gate, and the relief channel for a user-chosen accent whose contrast against the
-   * surface cannot be checked ahead of time. Pass a readable sample, not a hundred rows.
-   */
   readonly columns: readonly DataTableColumn[]
   readonly rows: readonly (readonly (string | number)[])[]
-  /** Set false only where the plot already prints every value on the page. */
   readonly tableView?: boolean
-  /** Shown under the table when its rows are a sample of a larger series. */
   readonly tableNote?: ReactNode
   readonly footnote?: ReactNode
   readonly children: (width: number) => ReactNode
   readonly className?: string
 }
 
-/**
- * The shell every chart in this directory renders into: heading, plot area, and the table view.
- * No card around it — a chart already sits inside a measured column, and a second bordered box
- * only takes width from the plot.
- *
- * Titles are a plain element with an explicit level rather than an `<h3>`, so a chart dropped into
- * prose does not inherit the article's heading type scale.
- */
 export function ChartFrame({
   children,
   className,
@@ -308,8 +253,6 @@ export function ChartFrame({
           {description}
         </div>
       )}
-      {/* Directly above the plot rather than tucked into the footnote: it is the instruction for
-          reading the marks, so it has to arrive before them. */}
       {goal !== undefined && <ChartGoalMarker goal={goal} />}
       <div className="mt-6" ref={containerRef}>
         {width > 0 && children(width)}
@@ -319,7 +262,6 @@ export function ChartFrame({
           {footnote}
         </div>
       )}
-      {/* The rule that closes the figure off from the prose under it. */}
       {tableView && (
         <div className="border-border mt-6 border-t pt-2.5">
           <button
@@ -366,11 +308,9 @@ export function ChartFrame({
 export interface LegendEntry {
   readonly color: string
   readonly label: string
-  /** Lines key with a stroke, filled marks with a swatch, so the legend mirrors the mark. */
   readonly shape?: "line" | "swatch"
 }
 
-/** Present whenever a chart carries two or more series: identity is never colour alone. */
 export function ChartLegend({ entries }: { entries: readonly LegendEntry[] }) {
   return (
     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
@@ -397,20 +337,11 @@ export interface TooltipRow {
   readonly value: string
 }
 
-/** Which diagonal a readout should try first — the quadrant beside the mark that is likely empty. */
 export interface TooltipPlacement {
   readonly dx: -1 | 1
   readonly dy: -1 | 1
 }
 
-/**
- * The hover readout. Values lead and labels follow — the legend's hierarchy inverted, because the
- * reader already knows which series they pointed at.
- *
- * It sits diagonally off the mark so it does not hide the mark or the stretch of line being
- * followed: the caller names the quadrant its data is not in, and the readout flips to the
- * opposite side only when it would otherwise leave the plot.
- */
 export function ChartTooltip({
   heading,
   height,
@@ -421,7 +352,6 @@ export function ChartTooltip({
   y,
 }: {
   readonly heading: string
-  /** Plot height, so the readout can be kept inside it. */
   readonly height: number
   readonly placement?: TooltipPlacement
   readonly rows: readonly TooltipRow[]
@@ -439,8 +369,6 @@ export function ChartTooltip({
     setSize({ height: element.offsetHeight, width: element.offsetWidth })
   }, [heading, rows])
 
-  // Try the requested quadrant, flip to the other side of the mark when that would overflow, and
-  // clamp only as a last resort so the readout is never clipped by the article column.
   const GAP = 14
   const before = { x: x - GAP - size.width, y: y - GAP - size.height }
   const after = { x: x + GAP, y: y + GAP }
@@ -479,7 +407,6 @@ export function ChartTooltip({
                 style={{ backgroundColor: row.color }}
               />
             )}
-            {/* The value keeps its weight so it still leads the row; only its size steps down. */}
             <span className={cn(FIGURE_TYPE.label, "text-foreground font-medium tabular-nums")}>
               {row.value}
             </span>

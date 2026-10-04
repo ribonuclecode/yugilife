@@ -14,7 +14,6 @@ import { CardArtworkChooser } from "./card-artwork-chooser"
 
 import type { LoadedCatalogArtworkSet } from "./card-artwork-chooser"
 
-/** A variant replaces artwork and mask authoring as one unit, so selection is explicit. */
 export function ArtworkVariantSelection({
   artworkSet,
   onSelect,

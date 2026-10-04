@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { isTemplateVersion } from "yugilife-core"
 
 import {
   createInitialCard,
@@ -9,7 +10,7 @@ import {
 } from "../editor/model/editor-config"
 
 import { currentEditorDocumentVersion, migrateEditorDocumentSchema } from "./document"
-import { isTemplateVersion, migrateEditorTemplateVersion } from "./template"
+import { migrateEditorTemplateVersion } from "./template"
 
 import type { EditorDocumentState } from "../editor/model/editor-document"
 

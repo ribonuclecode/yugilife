@@ -3,7 +3,12 @@ import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promise
 import os from "node:os"
 import path from "node:path"
 
-import { validateCardTemplate, validateTemplateManifest } from "yugilife-core"
+import {
+  compareTemplateVersions,
+  isTemplateVersion,
+  validateCardTemplate,
+  validateTemplateManifest,
+} from "yugilife-core"
 import {
   DEFAULT_TEMPLATE_ID,
   loadInstalledTemplate,
@@ -44,6 +49,14 @@ interface RegistryEntry {
 }
 
 const maximumArtifactBytes = 128 * 1024 * 1024
+
+function isMissingFile(error: unknown) {
+  return (error as NodeJS.ErrnoException).code === "ENOENT"
+}
+
+function templateIdentity({ id, kind, name, version }: TemplateManifest): TemplateIdentity {
+  return { id, kind, name, version }
+}
 
 function storeRoot() {
   const configured = process.env["YUGILIFE_TEMPLATE_HOME"]
@@ -115,7 +128,7 @@ async function readStoredTemplate(id: string, version: string) {
     }
     return bundle
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined
+    if (isMissingFile(error)) return undefined
     throw new CliError("TEMPLATE_INVALID", `Installed template "${id}@${version}" is invalid.`, {
       cause: error,
     })
@@ -133,7 +146,7 @@ async function newestStoredVersion(id: string) {
       .filter((value): value is string => value !== undefined && isTemplateVersion(value))
     return versions.sort((left, right) => compareTemplateVersions(right, left))[0]
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined
+    if (isMissingFile(error)) return undefined
     throw error
   }
 }
@@ -224,15 +237,7 @@ export async function installCliTemplate(
   if (packaged) return { alreadyInstalled: true, identity: packaged }
   const installed = await readStoredTemplate(id, version)
   if (installed) {
-    return {
-      alreadyInstalled: true,
-      identity: {
-        id: installed.manifest.id,
-        kind: installed.manifest.kind,
-        name: installed.manifest.name,
-        version: installed.manifest.version,
-      },
-    }
+    return { alreadyInstalled: true, identity: templateIdentity(installed.manifest) }
   }
 
   const registry = options.registry ?? process.env["YUGILIFE_TEMPLATE_REGISTRY_URL"]
@@ -293,15 +298,7 @@ export async function installCliTemplate(
   } finally {
     await rm(temporary, { force: true })
   }
-  return {
-    alreadyInstalled: false,
-    identity: {
-      id: bundle.manifest.id,
-      kind: bundle.manifest.kind,
-      name: bundle.manifest.name,
-      version: bundle.manifest.version,
-    } satisfies TemplateIdentity,
-  }
+  return { alreadyInstalled: false, identity: templateIdentity(bundle.manifest) }
 }
 
 export async function listCliTemplates() {
@@ -315,7 +312,7 @@ export async function listCliTemplates() {
     try {
       entries = await readdir(directory, { withFileTypes: true })
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") return
+      if (isMissingFile(error)) return
       throw error
     }
     for (const entry of entries) {
@@ -324,15 +321,9 @@ export async function listCliTemplates() {
       else if (entry.isFile() && entry.name.endsWith(".json")) {
         try {
           const bundle = validateArtifact(JSON.parse(await readFile(resolved, "utf8")))
-          stored.push({
-            id: bundle.manifest.id,
-            kind: bundle.manifest.kind,
-            name: bundle.manifest.name,
-            source: "installed",
-            version: bundle.manifest.version,
-          })
+          stored.push({ ...templateIdentity(bundle.manifest), source: "installed" })
         } catch {
-          // Invalid entries are reported when selected; listing remains useful for valid templates.
+          continue
         }
       }
     }
@@ -342,29 +333,4 @@ export async function listCliTemplates() {
     (left, right) =>
       left.id.localeCompare(right.id) || compareTemplateVersions(left.version, right.version),
   )
-}
-function templateVersionParts(version: string) {
-  return version.split(".").map(Number)
-}
-
-function isTemplateVersion(value: unknown): value is string {
-  if (typeof value !== "string" || !/^\d{4}\.\d{2}\.\d{2}(?:\.[1-9]\d*)?$/u.test(value)) {
-    return false
-  }
-  const [year, month, day] = templateVersionParts(value)
-  if (!year || !month || !day) return false
-  const date = new Date(Date.UTC(year, month - 1, day))
-  return (
-    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
-  )
-}
-
-export function compareTemplateVersions(left: string, right: string) {
-  const leftParts = templateVersionParts(left)
-  const rightParts = templateVersionParts(right)
-  for (let index = 0; index < 4; index += 1) {
-    const difference = (leftParts[index] ?? 0) - (rightParts[index] ?? 0)
-    if (difference !== 0) return difference
-  }
-  return 0
 }

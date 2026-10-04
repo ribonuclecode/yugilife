@@ -13,13 +13,6 @@ import art015 from "./assets/closeups/015-art.webp"
 import sam3015 from "./assets/closeups/015-sam3.webp"
 import toonout015 from "./assets/closeups/015-toonout.webp"
 
-/**
- * The same 340-pixel region of three artworks, at full resolution, in three states.
- *
- * The crops are not chosen by eye: each one is centred on the cell where the two alpha maps
- * disagree most, found by differencing them on a grid. Whole-artwork figures cannot show what
- * separates these two outputs, because the difference lives in a few hundred pixels of edge.
- */
 const ROWS = [
   {
     art: art006,
@@ -71,8 +64,6 @@ function CloseUp({ alt, src }: { readonly alt: string; readonly src: string }) {
   return (
     <div className="border-border bg-muted overflow-hidden rounded-lg border">
       <img
-        // The article caps image height at 70vh with no object fit; these are square crops, but the
-        // rule is the article's and not worth relying on.
         alt={alt}
         className="!my-0 !max-h-none !rounded-none !border-0"
         loading="lazy"

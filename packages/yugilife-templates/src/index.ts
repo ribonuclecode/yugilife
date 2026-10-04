@@ -1,14 +1,18 @@
-import { generatedDefaultTemplateIds, generatedTemplateEntries } from "./generated-catalog.js"
+import {
+  DEFAULT_TEMPLATE_ID,
+  officialTemplateEntries,
+  templateIdentity,
+} from "./official-entries.js"
 
+import type { OfficialTemplateEntry } from "./official-entries.js"
 import type {
   AssetSourceMap,
-  CardTemplate,
   CardTemplateBundle,
-  ColorPresetCollection,
   TemplateId,
   TemplateIdentity,
-  TemplateManifest,
 } from "yugilife-core"
+
+export { DEFAULT_TEMPLATE_ID }
 
 export interface TemplateLoadProgress {
   readonly loaded: number
@@ -27,13 +31,6 @@ export interface OfficialTemplate extends CardTemplateBundle, TemplateIdentity {
   load(options?: TemplateLoadOptions): Promise<LoadedTemplateBundle>
 }
 
-interface GeneratedTemplateEntry {
-  readonly assets: Readonly<Record<string, string>>
-  readonly colorPresets: unknown
-  readonly manifest: unknown
-  readonly template: unknown
-}
-
 function contentLength(response: Response) {
   const value = Number(response.headers.get("content-length"))
   return Number.isFinite(value) && value >= 0 ? value : undefined
@@ -44,7 +41,6 @@ async function readResponse(
   report: (bytes: number) => void,
   signal?: AbortSignal,
 ) {
-  if (!response.ok) throw new Error(`Template asset download failed with HTTP ${response.status}.`)
   if (!response.body) {
     const blob = await response.blob()
     report(blob.size)
@@ -77,18 +73,15 @@ async function readResponse(
 }
 
 async function loadBrowserEntry(
-  entry: GeneratedTemplateEntry,
+  entry: OfficialTemplateEntry,
   options: TemplateLoadOptions = {},
 ): Promise<LoadedTemplateBundle> {
-  const manifest = entry.manifest as TemplateManifest
-  const template = entry.template as CardTemplate
-  const assetEntries = Object.entries(entry.assets)
   const responses = await Promise.all(
-    assetEntries.map(async ([id, url]) => {
+    Object.entries(entry.assets).map(async ([id, url]) => {
       const response = await fetch(url, options.signal ? { signal: options.signal } : undefined)
       if (!response.ok) {
         throw new Error(
-          `Could not download asset "${id}" for template "${manifest.id}": HTTP ${response.status}.`,
+          `Could not download asset "${id}" for template "${entry.manifest.id}": HTTP ${response.status}.`,
         )
       }
       return [id, response] as const
@@ -99,63 +92,39 @@ async function loadBrowserEntry(
     ? lengths.reduce<number>((sum, length) => sum + (length ?? 0), 0)
     : undefined
   let loaded = 0
-  const report = (bytes: number) => {
-    loaded += bytes
-    options.onProgress?.({
-      loaded,
-      phase: "downloading",
-      ...(total === undefined ? {} : { total }),
-    })
-  }
-  options.onProgress?.({
-    loaded: 0,
-    phase: "downloading",
-    ...(total === undefined ? {} : { total }),
-  })
+  const reportProgress = (phase: TemplateLoadProgress["phase"]) =>
+    options.onProgress?.({ loaded, phase, ...(total === undefined ? {} : { total }) })
+  reportProgress("downloading")
   const assets = Object.fromEntries(
     await Promise.all(
       responses.map(async ([id, response]) => [
         id,
-        await readResponse(response, report, options.signal),
+        await readResponse(
+          response,
+          (bytes) => {
+            loaded += bytes
+            reportProgress("downloading")
+          },
+          options.signal,
+        ),
       ]),
     ),
   ) as AssetSourceMap
-  options.onProgress?.({ loaded, phase: "ready", ...(total === undefined ? {} : { total }) })
-  return Object.freeze({
-    assets,
-    colorPresets: entry.colorPresets as ColorPresetCollection,
-    manifest,
-    template,
-  })
+  reportProgress("ready")
+  return Object.freeze({ ...entry, assets })
 }
 
-const entriesById = new Map<TemplateId, GeneratedTemplateEntry>(
-  (generatedTemplateEntries as readonly GeneratedTemplateEntry[]).map((entry) => {
-    const manifest = entry.manifest as TemplateManifest
-    return [manifest.id, entry]
-  }),
-)
-
-function descriptor(entry: GeneratedTemplateEntry): OfficialTemplate {
-  const manifest = entry.manifest as TemplateManifest
+function descriptor(entry: OfficialTemplateEntry): OfficialTemplate {
   return Object.freeze({
-    id: manifest.id,
-    kind: manifest.kind,
-    manifest,
-    name: manifest.name,
-    version: manifest.version,
-    assets: entry.assets,
-    colorPresets: entry.colorPresets as ColorPresetCollection,
-    template: entry.template as CardTemplate,
+    ...templateIdentity(entry.manifest),
+    ...entry,
     load: (options?: TemplateLoadOptions) => loadBrowserEntry(entry, options),
   })
 }
 
 export const TEMPLATE_CATALOG: readonly OfficialTemplate[] = Object.freeze(
-  [...entriesById.values()].map(descriptor),
+  officialTemplateEntries.map(descriptor),
 )
-
-export const DEFAULT_TEMPLATE_ID: TemplateId = generatedDefaultTemplateIds.card
 
 export const DEFAULT_TEMPLATE = TEMPLATE_CATALOG.find(({ id }) => id === DEFAULT_TEMPLATE_ID)!
 

@@ -1,9 +1,3 @@
-/**
- * The serialized card-text format is deliberately small and is not HTML. Keeping its parser
- * separate from the SVG renderer lets the editor, preview, and export share the same validation
- * and escaping rules without handing user-authored markup to a browser HTML parser.
- */
-
 export type RichTextTagName =
   | "align"
   | "b"
@@ -424,12 +418,6 @@ interface OpenElement {
   readonly start: number
 }
 
-/**
- * Parses serialized card text without executing markup. Unknown tags and invalid tag syntax are
- * kept as literal text and reported in `warnings`. A recognized opening tag may remain open through
- * the end of the source: its formatting scope continues to the end and an `unclosed-tag` warning is
- * reported.
- */
 export function parseRichText(source: string): RichTextParseResult {
   const warnings: RichTextWarning[] = []
   const roots: RichTextNode[] = []
@@ -546,7 +534,6 @@ export function parseRichText(source: string): RichTextParseResult {
   }
 }
 
-/** Returns the visible text, omitting formatting markup and representing explicit spaces as spaces. */
 export function plainTextFromRichText(document: RichTextDocument): string {
   const visit = (nodes: readonly RichTextNode[]): string =>
     nodes
@@ -559,10 +546,6 @@ export function plainTextFromRichText(document: RichTextDocument): string {
   return visit(document.children)
 }
 
-/**
- * Returns whether a rich-text source has a visible leading authored line and visible content after
- * its first explicit newline. Rendered wrapping is deliberately irrelevant to this predicate.
- */
 export function hasLeadingAuthoredLineFitSplit(source: string | RichTextDocument): boolean {
   const document = typeof source === "string" ? parseRichText(source).document : source
   const authoredLines = plainTextFromRichText(document).split(/\r\n?|\n/gu)
@@ -573,7 +556,6 @@ export function hasLeadingAuthoredLineFitSplit(source: string | RichTextDocument
   )
 }
 
-/** Splits text using the same grapheme boundary policy used by text measurement. */
 export function graphemeSegments(text: string): readonly string[] {
   if (typeof Intl.Segmenter === "function") {
     return [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text)].map(
@@ -587,7 +569,6 @@ export function graphemeCount(text: string) {
   return graphemeSegments(text).length
 }
 
-/** Returns the visible grapheme count for each rendered line of a rich-text source. */
 export function richTextLineLengths(source: string): readonly number[] {
   const visibleText = plainTextFromRichText(parseRichText(source).document)
   return visibleText.split(/\r\n?|\n/gu).map(graphemeCount)

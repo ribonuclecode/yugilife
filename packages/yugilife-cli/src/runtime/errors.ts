@@ -49,12 +49,8 @@ export class CliError extends Error {
   }
 }
 
-export function isCliError(error: unknown): error is CliError {
-  return error instanceof CliError
-}
-
 export function asCliError(error: unknown): CliError {
-  if (isCliError(error)) return error
+  if (error instanceof CliError) return error
   if (error instanceof Error) {
     return new CliError("INTERNAL_ERROR", error.message, { cause: error })
   }

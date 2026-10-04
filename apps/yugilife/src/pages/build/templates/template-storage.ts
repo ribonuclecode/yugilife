@@ -1,10 +1,10 @@
+import { isTemplateVersion } from "yugilife-core"
+
+import { requestResult, transactionComplete } from "@/lib/indexed-db"
+import { isRecord } from "@/lib/utils"
+
 import { deletePreparedTextures, preparedTextureCacheBytes } from "./prepared-texture-storage"
-import {
-  openTemplateDatabase,
-  requestResult,
-  templateStore,
-  transactionComplete,
-} from "./template-database"
+import { openTemplateDatabase, templateStore } from "./template-database"
 
 import type { AssetSource, CardTemplateBundle, TemplateId } from "yugilife-core"
 
@@ -44,10 +44,6 @@ interface PersistedTemplateRecord extends Omit<StoredTemplateRecord, "source"> {
   source?: TemplateRecordSource
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
-
 export interface OriginStorageEstimate {
   quota?: number
   usage?: number
@@ -55,7 +51,6 @@ export interface OriginStorageEstimate {
 
 export interface TemplateStorageSnapshot {
   originStorage: OriginStorageEstimate
-  /** Bytes held by textures graded once per template release, beside the bundles themselves. */
   preparedTextureBytes: number
   storageMode: TemplateStorageMode
   templates: readonly StoredTemplateRecord[]
@@ -93,7 +88,7 @@ function isPersistedTemplateRecord(value: unknown): value is PersistedTemplateRe
   return true
 }
 
-export function templateBundleSize(bundle: CardTemplateBundle) {
+function templateBundleSize(bundle: CardTemplateBundle) {
   return Object.values(bundle.assets).reduce((total, source) => total + sourceSize(source), 0)
 }
 
@@ -160,9 +155,7 @@ export async function storeTemplate(
   bundle: CardTemplateBundle,
   source: TemplateRecordSource = "official",
 ) {
-  // Whatever textures were held for this ID were graded from the bundle this one replaces. Their
-  // version cannot be trusted to have moved: editing a user template keeps its identity, and may
-  // rewrite the very color presets those textures were graded with.
+  // Edited user templates keep their identity, so their textures cannot be trusted to match.
   await deletePreparedTextures(bundle.manifest.id)
   const record: StoredTemplateRecord = {
     bundle,
@@ -238,4 +231,3 @@ export async function readTemplateStorageSnapshot(): Promise<TemplateStorageSnap
   ])
   return { originStorage, preparedTextureBytes, storageMode, templates }
 }
-import { isTemplateVersion } from "../migrations/template"

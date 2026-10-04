@@ -11,11 +11,6 @@ import type { EditorDocumentState } from "../../build/editor/model/editor-docume
 import type { PreparedTextures } from "yugilife-core"
 import type { LoadedTemplateBundle } from "yugilife-templates"
 
-/**
- * Processes a document's artwork mask with no reuse of an editor frame. The build editor keeps a
- * cached processed frame and passes it in; every other caller renders from the stored document
- * alone and reaches the same pixels the slower way.
- */
 export async function processedInventoryMask(
   document: EditorDocumentState,
   bundle: LoadedTemplateBundle,
@@ -30,10 +25,6 @@ export async function processedInventoryMask(
   )
 }
 
-/**
- * The single renderer for inventory previews. Saving, opening a migrated card, and the bulk refresh
- * all route through here, so a thumbnail cannot depend on which path produced it.
- */
 export async function renderInventoryPreview(
   document: EditorDocumentState,
   bundle: LoadedTemplateBundle,

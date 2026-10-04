@@ -6,15 +6,6 @@ import detail from "./assets/points/detail.webp"
 import dots from "./assets/points/dots.webp"
 import mask from "./assets/points/mask.webp"
 
-/**
- * A finished mask, the points derived from it, and where those points land on the drawing.
- *
- * Three columns rather than a before/after pair: the middle tile is the only place the detector's
- * own output is legible, and the third is the one that shows the points are not decoration — they
- * sit on the boundary a person would have clicked along. The detail strip underneath is the same
- * points at full resolution, because at a third of the column the pairing across the edge is a
- * speckle.
- */
 const COLUMNS = [
   {
     alt: "The finished mask for the artwork, white subject on black.",
@@ -63,8 +54,6 @@ function Tile({ alt, src }: { readonly alt: string; readonly src: string }) {
   return (
     <div className="border-border bg-muted overflow-hidden rounded-lg border">
       <img
-        // The article caps image height at 70vh with no object fit; these are all wider than tall
-        // or square, but the rule is the article's and not worth relying on.
         alt={alt}
         className="!my-0 !max-h-none !rounded-none !border-0"
         loading="lazy"

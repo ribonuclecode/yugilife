@@ -1,18 +1,7 @@
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 
-/**
- * Gives every public route its own HTML file, so search engines and link previews see a real page
- * with its own title, description, and canonical address instead of one shell for the whole app.
- *
- * Nothing here reaches the app bundle. The home page's head is injected into index.html (in dev as
- * well), and the build then writes a copy per route with that route's head swapped in, plus a
- * `<noscript>` body carrying the page's text, for crawlers that do not run JavaScript. Routes that
- * cannot be listed ahead of time, such as a saved card, fall through to 404.html, which is the same
- * app marked noindex.
- */
-
-export const siteUrl = "https://alixsep.github.io/yugilife/"
+const siteUrl = "https://alixsep.github.io/yugilife/"
 const repositoryUrl = "https://github.com/alixsep/yugilife"
 const author = {
   "@id": `${siteUrl}#author`,
@@ -80,10 +69,6 @@ function inlineMarkdown(text) {
     .replace(/(^|[\s(])[*_]([^*_]+)[*_](?=[\s).,;:!?]|$)/g, "$1<em>$2</em>")
 }
 
-/**
- * The prose of a post as plain HTML. Interactive figures and charts are MDX components that only
- * exist in the app, so they are left out; everything a reader would quote is kept.
- */
 function articleHtml(source) {
   const html = []
   const lines = source.replace(/\r\n/g, "\n").split("\n")
@@ -285,7 +270,6 @@ function sitemap(routes) {
 const seoBlock = /<!-- seo:start -->[\s\S]*?<!-- seo:end -->/
 const noscriptBlock = /<noscript>\n<main>[\s\S]*?<\/main>\n<\/noscript>/
 
-/** @returns {import("vite").Plugin} */
 export function yugilifeSeoPages() {
   let outDir = "dist"
   let routes

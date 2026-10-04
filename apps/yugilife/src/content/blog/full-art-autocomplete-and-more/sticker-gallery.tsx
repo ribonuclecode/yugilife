@@ -12,10 +12,6 @@ import sticker10 from "./assets/stickers/sticker-10.webp"
 import sticker11 from "./assets/stickers/sticker-11.webp"
 import sticker12 from "./assets/stickers/sticker-12.webp"
 
-/**
- * The thirteen security foils at their native 42px rather than enlarged: the asset is 42px, and
- * scaling it up would show a blur that does not exist on a real card.
- */
 const STICKERS = [
   sticker00,
   sticker01,
@@ -35,8 +31,6 @@ const STICKERS = [
 export function StickerGallery() {
   return (
     <figure>
-      {/* One box rather than thirteen: the foils are a set you pick from, and giving each its own
-          frame turned a palette into a row of unrelated specimens. */}
       <div className="border-border bg-muted mx-auto grid w-fit grid-cols-4 gap-4 rounded-lg border p-4 sm:gap-5 sm:p-5">
         {STICKERS.map((src, index) => (
           <img

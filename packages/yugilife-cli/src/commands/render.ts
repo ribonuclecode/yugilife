@@ -5,21 +5,12 @@ import { BrowserHost } from "../runtime/browser-host.js"
 import { CliError } from "../runtime/errors.js"
 import { decodeRasterDataUrl, loadRenderRequest } from "../runtime/input.js"
 
+import type { RenderRequestOptions } from "../runtime/input.js"
+
 export async function runRender(
   inputPath: string,
   outputPath: string,
-  options: {
-    readonly backgroundColor?: string
-    readonly height?: number
-    readonly quality?: number
-    readonly scale?: number
-    readonly signal?: AbortSignal
-    readonly templateReference?: string
-    readonly textMode?: "paths" | "text"
-    readonly title?: string
-    readonly useDefaultTemplate?: boolean
-    readonly width?: number
-  } = {},
+  options: RenderRequestOptions & { readonly signal?: AbortSignal | undefined } = {},
 ) {
   const resolvedOutputPath = path.resolve(outputPath)
   const request = await loadRenderRequest(inputPath, resolvedOutputPath, options)

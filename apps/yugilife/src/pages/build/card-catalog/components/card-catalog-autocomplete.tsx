@@ -106,10 +106,6 @@ function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-/**
- * The loader owns the arithmetic, because only it knows how many files a batch will fetch. This
- * only words the result, split so the stage reads on the left and its numbers sit on the right.
- */
 function artworkProgressStatus(count: number, progress: CardArtworksLoadProgress | undefined) {
   const artworks = `${count} artwork${count === 1 ? "" : "s"}`
   if (!progress) return { label: `Preparing ${artworks}` }
@@ -275,11 +271,7 @@ export function CardCatalogAutocomplete({
           "No artwork is available for this card yet. Your existing artwork and masks were kept.",
         )
       }
-      // An empty artwork field is the card's "no image" value, so a card with no mapped or
-      // available artwork applies with it cleared rather than failing.
       const artwork = initialArtwork?.image ?? ""
-      // Provenance records the requested identity even when its file is not hosted yet, so a later
-      // restore can retry the same artwork.
       const catalogArtworkId = initialArtworkId ?? selection.entry.artworkIds[0]
       applyPatch(
         artworkOnly
@@ -381,11 +373,6 @@ export function CardCatalogAutocomplete({
     // The warning describes the previous apply; a new search is the end of that interaction.
     setApplyWarning(undefined)
   }
-  /**
-   * Reloading leaves the ready state, so the popup closes here rather than in an effect watching
-   * for that transition: a stale `catalogOpen` would otherwise reopen the list by itself when the
-   * catalog becomes ready again with text still in the field.
-   */
   const handleCatalogReload = () => {
     setCatalogOpen(false)
     catalog.load()
@@ -486,9 +473,6 @@ export function CardCatalogAutocomplete({
           )}
           {applyError && <FieldError>{applyError} No card fields were changed.</FieldError>}
           <DialogFooter>
-            {/* Labels stay fixed across the idle and downloading states: a footer whose buttons
-                grow mid-apply either wraps into ragged rows or reflows under the pointer. The
-                download state is already carried by the progress bar and the primary spinner. */}
             <DialogClose asChild>
               <Button variant="ghost">Cancel</Button>
             </DialogClose>

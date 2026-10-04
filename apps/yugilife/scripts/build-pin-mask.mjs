@@ -9,9 +9,6 @@ const source = fileURLToPath(
 const output = fileURLToPath(
   new URL("../src/lib/pin-mask/quick-selection-kernels.wasm", import.meta.url),
 )
-// The worker bounds dot segmentation to a 768px working plane, while mask effects can still
-// process a native 4K mask. Keep one explicit ceiling for both paths instead of relying on a
-// browser-specific default maximum.
 const wasmMaxMemory = 128 * 1024 * 1024
 
 try {

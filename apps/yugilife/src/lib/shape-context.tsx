@@ -14,9 +14,6 @@ interface ShapeClasses {
   container: string
   button: string
   input: string
-  // Numeric counterpart of `bg`, in px. Needed where individual corners are
-  // animated (e.g. the selected-background merge/split animation), which
-  // requires per-corner numeric border-radii rather than a class.
   bgRadius: number
   mergedRadius: number
 }
@@ -25,9 +22,6 @@ const shapeMap: Record<ShapeVariant, ShapeClasses> = {
   pill: {
     item: "rounded-[20px]",
     bg: "rounded-[20px]",
-    // +2px over `item` because the focus ring sits 2px outside the element
-    // (top/left -2, width/height +4); this keeps the corners concentric so a
-    // pill element gets a pill ring (matches the rounded-mode 8px→10px bump).
     focusRing: "rounded-[22px]",
     container: "rounded-3xl",
     button: "rounded-[20px]",
@@ -47,7 +41,6 @@ const shapeMap: Record<ShapeVariant, ShapeClasses> = {
   },
 }
 
-/** Popover/menu surfaces intentionally stay on the tighter radius. */
 const popupShape = shapeMap.rounded
 
 interface ShapeContextValue {
@@ -62,12 +55,6 @@ function useShape(): ShapeClasses {
   const ctx = useContext(ShapeContext)
   if (!ctx) return shapeMap.rounded
   return ctx.classes
-}
-
-function useShapeContext() {
-  const ctx = useContext(ShapeContext)
-  if (!ctx) throw new Error("useShapeContext must be used within a ShapeProvider")
-  return ctx
 }
 
 function ShapeProvider({
@@ -87,10 +74,6 @@ function ShapeProvider({
     [shape],
   )
 
-  // Publish the current element radius as a CSS custom property so plain-CSS
-  // consumers that can't read React context stay in sync with the shape
-  // system — e.g. the @layer base :focus-visible fallback ring in
-  // index.css. Set on <html> so portalled content sees it too.
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--shape-input-radius",
@@ -103,5 +86,5 @@ function ShapeProvider({
   return <ShapeContext.Provider value={value}>{children}</ShapeContext.Provider>
 }
 
-export { popupShape, shapeMap, ShapeProvider, useShape, useShapeContext }
+export { popupShape, ShapeProvider, useShape }
 export type { ShapeClasses, ShapeVariant }

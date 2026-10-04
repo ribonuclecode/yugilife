@@ -13,41 +13,19 @@ import { useShape } from "@/lib/shape-context"
 import { spring } from "@/lib/springs"
 import { cn } from "@/lib/utils"
 
-import { ArtworkMaskWorkspace } from "../editor/components/artwork-editor"
+import { ArtworkMaskWorkspace } from "../editor/components/artwork-mask-workspace"
 import { activationProgressPercent } from "../templates/prepare-template-textures"
 
 import { renderedTextBounds, renderedTextFieldAt } from "./card-preview-hit-test"
 
-import type { ArtworkEditorTool } from "../editor/components/artwork-editor"
-import type { ArtworkMaskEditingState } from "../editor/model/editor-document"
+import type { ArtworkMaskWorkspaceProps } from "../editor/components/artwork-mask-workspace"
 import type { useBuildController } from "./use-build-controller"
 import type { CardRenderMetadata } from "@/components/card"
-import type {
-  ArtworkMaskChannel,
-  ProcessedArtworkMaskPixels,
-} from "@/lib/pin-mask/artwork-mask-effects"
 import type { MouseEvent } from "react"
 import type { RenderManifest } from "yugilife-core"
 
-interface ArtworkWorkspaceProps {
-  artwork: Blob
-  mask: ArtworkMaskEditingState
-  maskChannel: ArtworkMaskChannel
-  artworkEffectsError?: string | undefined
-  processedMaskBusy: boolean
-  getProcessedMaskPixels: () => ProcessedArtworkMaskPixels | undefined
-  processedMaskRevision: number
-  onMaskChange: (mask: ArtworkMaskEditingState) => void
-  onMaskComplete?: (artwork: Blob, points: ArtworkMaskEditingState["points"], mask: Blob) => void
-  onRetryArtworkEffects?: () => void
-  onSelectedPinChange: (id: number | null) => void
-  pinSize: number
-  selectedPinId: number | null
-  tool: ArtworkEditorTool
-}
-
 interface CardPreviewProps {
-  artworkWorkspace: ArtworkWorkspaceProps | undefined
+  artworkWorkspace: ArtworkMaskWorkspaceProps | undefined
   controller: ReturnType<typeof useBuildController>
   manifest?: RenderManifest | undefined
   onFocusField: (fieldName: string, controlIndex?: number) => void

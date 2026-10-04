@@ -85,7 +85,6 @@ function composite(foreground: RgbaColor, backdrop: RgbaColor): RgbColor {
   }
 }
 
-/** Chooses whichever of pure black or white has greater WCAG contrast. */
 export function foregroundForCssColor(
   color: string,
   backdropColor = "#ffffff",

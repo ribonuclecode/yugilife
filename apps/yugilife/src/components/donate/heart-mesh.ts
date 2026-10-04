@@ -1,9 +1,3 @@
-/**
- * The heart the donate button carries: modelled, not generated. 1202 vertices and 2400 triangles,
- * watertight, quantised to int16 and packed as positions then indices. Normalised to a unit box
- * and already Y-up. Normals are not shipped — recomputing them halves the payload and costs
- * nothing on a mesh this size.
- */
 export const heartMesh = {
   verts: 1202,
   tris: 2400,

@@ -1,22 +1,11 @@
-/**
- * A QR encoder for the donate sheet's contact links.
- *
- * Byte mode at error-correction level M, the version chosen as the smallest that fits. The sheet
- * encodes three short URLs, which is far too little to justify a dependency; this is the standard
- * construction (ISO/IEC 18004) written out, and `qr-code.test.ts` reads every symbol back through
- * an independent decoder so a placement or arithmetic slip cannot pass as a scannable code.
- */
-
 export interface QrMatrix {
   readonly size: number
-  /** Row-major, one entry per module; 1 is dark. */
   readonly modules: Uint8Array
 }
 
 const MIN_VERSION = 1
 const MAX_VERSION = 40
 
-/** Error-correction level M: the format-info bits and the block structure per version. */
 const LEVEL_M_FORMAT_BITS = 0
 const ECC_CODEWORDS_PER_BLOCK = [
   -1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28,
@@ -32,7 +21,6 @@ const PENALTY_N2 = 3
 const PENALTY_N3 = 40
 const PENALTY_N4 = 10
 
-/** Carry-less multiplication in GF(2^8) modulo x^8 + x^4 + x^3 + x^2 + 1. */
 function multiply(x: number, y: number) {
   let z = 0
   for (let i = 7; i >= 0; i--) {
@@ -42,7 +30,6 @@ function multiply(x: number, y: number) {
   return z
 }
 
-/** The Reed–Solomon generator polynomial of the given degree, highest-order term omitted. */
 function reedSolomonDivisor(degree: number) {
   const result = new Array<number>(degree).fill(0)
   result[degree - 1] = 1
@@ -203,7 +190,6 @@ class QrSymbol {
     }
   }
 
-  /** Codewords into the free modules, two columns at a time, bottom-up then top-down. */
   drawCodewords(codewords: readonly number[]) {
     let bit = 0
     for (let right = this.size - 1; right >= 1; right -= 2) {
@@ -415,11 +401,6 @@ function addErrorCorrection(data: readonly number[], version: number) {
   return result
 }
 
-/**
- * `minVersion` draws the symbol larger than it needs to be. A set of codes shown side by side
- * reads as one family only if their modules are the same size, and version is what decides that:
- * left alone, a longer URL silently becomes a denser square beside its neighbours.
- */
 export function encodeQr(text: string, minVersion = MIN_VERSION): QrMatrix {
   const bytes = new TextEncoder().encode(text)
   const version = chooseVersion(bytes.length, minVersion)
@@ -445,14 +426,12 @@ export function encodeQr(text: string, minVersion = MIN_VERSION): QrMatrix {
   return { modules: symbol.modules, size: symbol.size }
 }
 
-/** The smallest version that holds `text`, without building the symbol. */
 export function qrVersionFor(text: string) {
   return chooseVersion(new TextEncoder().encode(text).length)
 }
 
 export const QR_QUIET_ZONE = 4
 
-/** One path covering every dark module, offset by the quiet zone, for a viewBox of `size + 8`. */
 export function qrPath({ modules, size }: QrMatrix) {
   const parts: string[] = []
   for (let y = 0; y < size; y++) {

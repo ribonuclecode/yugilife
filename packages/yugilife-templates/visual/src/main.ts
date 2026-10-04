@@ -110,14 +110,6 @@ function fixtureCard(parameters: URLSearchParams) {
   return { card, id: "synthetic" }
 }
 
-/**
- * The template's textures, graded once for the whole page.
- *
- * Every fixture on this page draws the same frame and effect-box textures, so grading them per
- * fixture would measure the same work over and over instead of the rendering under test. Preparing
- * them is also what the application does before its first card, so the baselines describe the pixels
- * users actually see.
- */
 let preparing: Promise<PreparedTextures> | undefined
 function preparedTextures() {
   preparing ??= prepareTemplateTextures(DEFAULT_TEMPLATE).then(({ textures }) => textures)
@@ -137,8 +129,6 @@ async function drawFixture(search: string) {
   delete host.dataset.error
   try {
     const { card, id } = fixtureCard(parameters)
-    // `prepared=false` keeps the live grading path reachable: it is what an application renders
-    // with before its textures have been prepared, and it must keep working on its own.
     const textures = parameters.get("prepared") === "false" ? undefined : await preparedTextures()
     host.innerHTML = await exportCardToSvg(card, {
       templateBundle: DEFAULT_TEMPLATE,
@@ -163,14 +153,6 @@ async function drawFixture(search: string) {
   }
 }
 
-/**
- * Renders one fixture into the shared host, one at a time.
- *
- * Exposed so the suite can exercise many fixtures against one loaded page rather than reloading the
- * harness, its fonts and its textures for each of them. Renders are queued rather than started
- * concurrently: they all write the same host element, so a slower one finishing last would leave
- * the page showing a card nobody asked for — including the fixture this page first loaded with.
- */
 let queued: Promise<void> = Promise.resolve()
 function renderFixture(search: string) {
   const next = queued.then(

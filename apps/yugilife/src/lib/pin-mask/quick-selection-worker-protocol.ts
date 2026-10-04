@@ -1,6 +1,5 @@
 import type { PinMaskPoint } from "./quick-selection-types"
 
-/** Messages crossing the main-thread/worker boundary for one prepared artwork. */
 export type QuickSelectionWorkerRequest =
   | {
       id: number

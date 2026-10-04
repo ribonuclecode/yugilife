@@ -1,3 +1,4 @@
+import { walkLayers } from "./rendering/layer-tree.js"
 import {
   describeFieldValueViolation,
   initialFieldValue,
@@ -6,7 +7,7 @@ import {
   validatePresentationOverridesShape,
   validateSvgElementShape,
   validateTemplateManifestShape,
-} from "./template-shape.js"
+} from "./schema/index.js"
 
 import type {
   CardData,
@@ -70,23 +71,18 @@ export function validatePresentationOverrides(
 
 function repeatedImageViolations(card: CardData, template: CardTemplate) {
   const violations: string[] = []
-  const visit = (layers: CardTemplate["layers"]) => {
-    layers.forEach((layer) => {
-      if (layer.kind === "repeated-image") {
-        const field = String(layer["field"])
-        const value = card[field]
-        if (
-          value !== undefined &&
-          value !== "" &&
-          (typeof value !== "number" || !Number.isInteger(value) || value < 0)
-        ) {
-          violations.push(`"${field}" must be a non-negative integer`)
-        }
-      }
-      if (layer.kind === "group") visit((layer as { layers: CardTemplate["layers"] }).layers)
-    })
-  }
-  visit(template.layers)
+  walkLayers(template.layers, ({ layer }) => {
+    if (layer.kind !== "repeated-image") return
+    const field = String(layer["field"])
+    const value = card[field]
+    if (
+      value !== undefined &&
+      value !== "" &&
+      (typeof value !== "number" || !Number.isInteger(value) || value < 0)
+    ) {
+      violations.push(`"${field}" must be a non-negative integer`)
+    }
+  })
   return violations
 }
 
@@ -104,21 +100,11 @@ export function validateCardData(card: CardData, template: CardTemplate) {
   }
 }
 
-/**
- * Builds a card populated from the template's declared field defaults.
- *
- * Optional fields without a `defaultValue` get an empty value, so the result is a starting point for
- * an editor rather than a guaranteed-valid card: a required field with no `defaultValue` is left
- * empty and will fail `validateCardData` until the author fills it in. Numeric fallbacks respect
- * declared `min`/`max` bounds.
- */
 export function createCardFromTemplate(template: CardTemplate): CardData {
   const card: Record<string, CardFieldValue> = {}
   for (const field of template.cardFields) {
     card[field.name] = initialFieldValue(field)
   }
-  // The template schema guarantees a required text `name`, so this only guards a hand-built
-  // template object that bypassed validation.
   if (typeof card["name"] !== "string") card["name"] = ""
   return card as CardData
 }

@@ -204,9 +204,6 @@ export function usePreviewPlayground({
           : event.deltaMode === globalThis.WheelEvent.DOM_DELTA_PAGE
             ? Math.max(1, bounds.height)
             : 1
-      // Browsers expose touchpad pinch as a ctrl-modified wheel gesture. Its
-      // deltas are intentionally smaller than a mouse wheel's, so use a more
-      // responsive curve while preserving pointer-anchored zoom for both.
       const sensitivity = event.ctrlKey ? 0.01 : 0.0015
       zoomAt(
         zoomRef.current * Math.exp(-event.deltaY * unit * sensitivity),

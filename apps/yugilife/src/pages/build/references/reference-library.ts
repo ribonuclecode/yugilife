@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 
+import { errorMessage } from "@/lib/utils"
+
 import {
   defaultReferenceTransform,
   readReferenceTransforms,
@@ -54,7 +56,7 @@ export function useReferenceImages() {
       })
       .catch((error: unknown) => {
         setStorageMode(getReferenceStorageMode())
-        setStorageError(error instanceof Error ? error.message : String(error))
+        setStorageError(errorMessage(error))
       })
 
     return () => {
@@ -80,7 +82,7 @@ export function useReferenceImages() {
           .then(() => setStorageMode(getReferenceStorageMode()))
           .catch((error: unknown) => {
             setStorageMode(getReferenceStorageMode())
-            setStorageError(error instanceof Error ? error.message : String(error))
+            setStorageError(errorMessage(error))
           })
         return { id, name: file.name, src, transform: { ...defaultReferenceTransform } }
       })
@@ -133,7 +135,7 @@ export function useReferenceImages() {
       .then(() => setStorageMode(getReferenceStorageMode()))
       .catch((error: unknown) => {
         setStorageMode(getReferenceStorageMode())
-        setStorageError(error instanceof Error ? error.message : String(error))
+        setStorageError(errorMessage(error))
       })
   }
 

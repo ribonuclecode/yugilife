@@ -131,7 +131,6 @@ function isActive(
   return !binding.when || matchesSemanticCondition({ values }, binding.when)
 }
 
-/** Evaluates a template-declared semantic condition without knowing any card-family vocabulary. */
 export function matchesSemanticCondition(
   semantics: CardSemantics,
   condition: SemanticCondition,
@@ -149,10 +148,6 @@ export function matchesSemanticCondition(
   return semantics.values[condition.path] === condition.equals
 }
 
-/**
- * Derives template-declared semantic values. This evaluator knows only the generic binding
- * operations declared in the template; it has no intrinsic card kinds, frames, or named positions.
- */
 export function deriveCardSemantics(card: CardData, template: CardTemplate): CardSemantics {
   const bindings: CardSemanticBindings | undefined = template.semanticBindings
   if (!bindings) return Object.freeze({ values: Object.freeze({}) })

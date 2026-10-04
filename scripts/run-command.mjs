@@ -9,10 +9,6 @@ function appendTail(current, chunk) {
     : combined
 }
 
-/**
- * Runs one repository-tool child with bounded diagnostics, a phase deadline, and bounded shutdown.
- * Quiet output is always drained so a verbose child can never block on a full pipe.
- */
 export async function runCommand(
   command,
   arguments_,

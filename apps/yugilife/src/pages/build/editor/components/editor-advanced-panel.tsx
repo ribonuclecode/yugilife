@@ -37,13 +37,6 @@ interface EditorAdvancedPanelProps {
   showTextInteractionBounds: boolean
 }
 
-/**
- * One collapsed category of advanced settings.
- *
- * The summary carries the category's current weight — how many choices depart from the template, or
- * how much it contains — so the collapsed list still answers "where did I change something?" without
- * expanding every category in turn.
- */
 function AdvancedCategory({
   children,
   index,
@@ -74,7 +67,6 @@ function AdvancedCategory({
   )
 }
 
-/** A category reports what departs from the template when anything does, and its size otherwise. */
 function categorySummary(changed: number, size: string) {
   return changed > 0 ? `${changed} changed` : size
 }
@@ -83,12 +75,6 @@ function plural(count: number, noun: string) {
   return `${count} ${noun}${count === 1 ? "" : "s"}`
 }
 
-/**
- * The presentation choices currently departing from the template, each individually clearable.
- *
- * Reachable in both editor modes: overrides persist across a switch back to Automatic, so the way
- * out of them must not require turning Advanced mode on again.
- */
 export function ActiveOverridesList({
   activeOverrides,
   clearActiveOverride,
@@ -144,15 +130,6 @@ export function ActiveOverridesList({
   )
 }
 
-/**
- * Advanced settings, grouped by the subject each control acts on.
- *
- * Presented as one flat column these controls read as an undifferentiated wall: the same text style
- * appears once per capability list, and layer, texture and diagnostic switches sit at the same
- * visual weight as the typography they modify. Categories give each subject a single home, and
- * collapsing them by default means entering Advanced mode shows a short menu rather than every
- * control the template can expose.
- */
 export function EditorAdvancedPanel({
   alphaExportBusy,
   alphaExportReady,
@@ -190,8 +167,6 @@ export function EditorAdvancedPanel({
     () => groupEditorTextStyles(fittedText, compressibleText, paintableText),
     [compressibleText, fittedText, paintableText],
   )
-  // Overrides are keyed by the resolved style, which is exactly a group's key, so a style row can
-  // report that it carries one.
   const changedTextStyles = useMemo(
     () =>
       new Set(
@@ -203,8 +178,6 @@ export function EditorAdvancedPanel({
       ),
     [activeOverrides],
   )
-  // Artwork overrides are deliberately uncounted here: their controls live with the artwork itself
-  // in Card details, so attributing them to a category in this panel would point nowhere.
   const changed = useMemo(() => {
     const counts = { appearance: 0, layers: 0, text: 0 }
     for (const { kind } of activeOverrides) {
@@ -226,8 +199,6 @@ export function EditorAdvancedPanel({
           title="Text styles"
           value="text"
         >
-          {/* A style is the unit these controls belong to, so each one owns a row of its own: the
-            outer category answers "which style?" before any control has to be read. */}
           <Accordion className="w-full" type="multiple">
             {textStyles.map(
               ({ compression, fit, key, layerId, paint, style, styleId, styleLabel }, index) => (

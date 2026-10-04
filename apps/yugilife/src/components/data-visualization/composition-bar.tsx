@@ -21,7 +21,7 @@ import {
 import type { ChartGoal } from "./chart-frame"
 import type { ReactNode } from "react"
 
-export interface CompositionSegment {
+interface CompositionSegment {
   readonly id: string
   readonly label: string
   readonly value: number
@@ -31,34 +31,18 @@ export interface CompositionSegment {
 export interface CompositionBarProps {
   readonly title: string
   readonly description?: ReactNode
-  /** Which direction on this chart is the good one. */
   readonly goal?: ChartGoal
   readonly segments: readonly CompositionSegment[]
   readonly format?: (value: number) => string
   readonly totalLabel?: string
-  /** Overrides the summed total, for when the whole is quoted in different units to its parts. */
   readonly totalValue?: string
   readonly footnote?: ReactNode
 }
 
 const BAR_HEIGHT = 42
-/**
- * Three pixels of the page separate touching segments, so neighbouring steps read as distinct
- * marks without a stroke around each one — separation as negative space rather than as ink.
- */
 const SURFACE_GAP = 3
-/** Below this a segment cannot hold its own value without crowding, so the list carries it alone. */
 const INLINE_LABEL_MIN = 56
 
-/**
- * A proportional stacked bar for part-to-whole. The parts wear one accent-derived hue stepped
- * light to dark, because they are pieces of a single measurement rather than four unrelated
- * things.
- *
- * The ramp follows the caller's order, so pass stages in the order they run: sorting a sequence by
- * size throws the sequence away. The list under the bar is the legend, the direct labelling, and
- * the relief channel for an accent whose contrast cannot be checked ahead of time, all at once.
- */
 export function CompositionBar({
   description,
   footnote,
@@ -87,9 +71,6 @@ export function CompositionBar({
       description={description}
       footnote={footnote}
       goal={goal}
-      // This figure has no table view: the list under the bar already names every part and prints
-      // both its value and its share, and the total is spelled out under them. A disclosure here
-      // would open onto the numbers the reader is already looking at.
       tableView={false}
       rows={[
         ...segments.map((segment) => [
@@ -134,14 +115,10 @@ export function CompositionBar({
                     onFocus={() => setHovered(segment.id)}
                     onPointerEnter={() => setHovered(segment.id)}
                     onPointerLeave={() => setHovered(null)}
-                    // The button is sized from the data, never from its contents: a label inside it
-                    // must not be able to change how much of the whole this part appears to be.
                     style={{ height: BAR_HEIGHT, left: x, width: segmentWidth }}
                     transition={reduceMotion ? { duration: 0 } : spring.fast}
                     type="button"
                   >
-                    {/* The fill is the animated child, so the bar assembles left to right as it
-                        scrolls into view instead of appearing fully formed. */}
                     <motion.span
                       animate={{ width: revealed || reduceMotion ? segmentWidth : 0 }}
                       className="absolute top-0 left-0 block"
@@ -153,11 +130,6 @@ export function CompositionBar({
                           : { ...spring.slow, delay: chartStagger(index, reduceMotion) }
                       }
                     />
-                    {/* The measurement rides its own segment, not the share: the width of the
-                        segment is already the share, and printing it inside says the same thing
-                        twice while leaving the quantity the parts actually sum to invisible. The
-                        ink is measured against the step it sits on rather than assumed, so the
-                        darker end of the ramp keeps its label instead of losing it. */}
                     {segmentWidth >= INLINE_LABEL_MIN && (
                       <motion.span
                         animate={{ opacity: revealed || reduceMotion ? 1 : 0 }}
@@ -188,11 +160,6 @@ export function CompositionBar({
               })}
             </div>
 
-            {/* One column, not two. The parts add up to the total underneath them, and that only
-                reads as arithmetic if every figure sits in the same right-hand column as the sum.
-                Two columns scatter the numbers across the width and leave an odd count ragged.
-                No rules between the rows either: space separates them, and a grid of hairlines
-                turns a short list into a spreadsheet. */}
             <div className="mt-5 grid gap-y-3">
               {placed.map(({ color, segment }) => {
                 const isHovered = hovered === segment.id
@@ -215,8 +182,6 @@ export function CompositionBar({
                       <span className={cn(FIGURE_TYPE.label, "text-foreground block truncate")}>
                         {segment.label}
                       </span>
-                      {/* `note`, not `axis`: axis type is for ticks inside the SVG, and this is
-                          the quiet second line under a label like any other. */}
                       {segment.note !== undefined && (
                         <span
                           className={cn(
@@ -228,8 +193,6 @@ export function CompositionBar({
                         </span>
                       )}
                     </span>
-                    {/* The share follows the value here because the bar stopped carrying it, and
-                        it stays quiet: it is the reading the eye already took off the width. */}
                     <span
                       className={cn(
                         FIGURE_TYPE.note,
@@ -251,9 +214,6 @@ export function CompositionBar({
               })}
             </div>
 
-            {/* The total gets the one rule in this figure. Without it the row reads as a fourth
-                part rather than the sum of the three above, which is the whole point of a
-                part-to-whole: a reader should never have to add the list up to check. */}
             <div className="border-border mt-5 flex items-baseline justify-between border-t pt-3.5">
               <span className={cn(FIGURE_TYPE.label, "text-foreground")}>{totalLabel}</span>
               <span

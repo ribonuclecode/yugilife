@@ -8,12 +8,6 @@ import gaiaTheFierceKnight from "./assets/full-art/gaia-the-fierce-knight.webp"
 import maleficBlueEyesWhiteDragon from "./assets/full-art/malefic-blue-eyes-white-dragon.webp"
 import oddEyesPendulumDragon from "./assets/full-art/odd-eyes-pendulum-dragon.webp"
 
-/**
- * Six real full art renders, chosen to cover the cases that each needed their own template work:
- * a Spell with no monster silhouette to hide behind, a Link with eight arrows and their shadows, a
- * Pendulum whose lower half changes what "the whole card" means, and three monsters whose artwork
- * has to survive the frame being composited over it.
- */
 const CARDS = [
   {
     alt: "Dark Magical Circle rendered as a full art Spell Card.",
@@ -54,8 +48,6 @@ export function FullArtGallery() {
         {CARDS.map((card) => (
           <div key={card.name}>
             <img
-              // The article caps image height at 70vh with no object fit, which distorts anything
-              // taller than it is wide. Cards are 813 × 1185.
               alt={card.alt}
               className="!my-0 !max-h-none !rounded-md"
               loading="lazy"

@@ -1,10 +1,9 @@
 import fs from "node:fs/promises"
 import path from "node:path"
-import { fileURLToPath } from "node:url"
 
 import wawoff2 from "wawoff2"
 
-const packageDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+import { packageDirectory } from "./paths.mjs"
 
 const convertibleFontExtension = /\.(?:ttf|otf)$/i
 

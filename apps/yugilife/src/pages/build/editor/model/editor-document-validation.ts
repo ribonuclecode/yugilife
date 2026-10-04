@@ -1,3 +1,4 @@
+import { isTemplateVersion } from "yugilife-core"
 import {
   collectLayerGroups,
   validateCardData,
@@ -5,16 +6,12 @@ import {
   walkLayers,
 } from "yugilife-core"
 
-import { isTemplateVersion } from "../../migrations/template"
+import { isRecord } from "@/lib/utils"
 
 import { editorColorPresets, editorTemplate, presetTargetsForTemplate } from "./editor-config"
 
 import type { EditorDocumentState } from "./editor-document"
 import type { CardTemplate, ColorPresetCollection } from "yugilife-core"
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
 
 const editorDocumentStateKeys = new Set([
   "artworkMask",
@@ -67,7 +64,6 @@ function validatePresetOverrides(
   }
 }
 
-/** Validates complete editor state at both import and IndexedDB hydration boundaries. */
 export function validateEditorDocumentState(
   document: EditorDocumentState,
   template: CardTemplate = editorTemplate,

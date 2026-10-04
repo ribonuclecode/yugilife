@@ -1,5 +1,5 @@
+import { validateColorPresetShape } from "./schema/index.js"
 import { tryGpuPolynomialGrading } from "./gpu-color-grading.js"
-import { validateColorPresetShape } from "./template-shape.js"
 
 import type { ColorPreset, PolynomialColorPreset } from "./contracts/index.js"
 
@@ -47,10 +47,7 @@ function hasCanonicalBasis(exponents: readonly (readonly number[])[]) {
 }
 
 function applyCanonicalPolynomialPreset(imageData: PixelImageData, preset: PolynomialColorPreset) {
-  // Full-card textures contain nearly one million pixels. Keep the calibrated 4/10/20-term bases
-  // on an allocation-free, branch-free inner loop instead of doing a nested term/channel walk for
-  // every pixel. Terms stay in canonical order so rounding remains byte-identical to the generic
-  // evaluator below.
+  // Unrolled for speed on ~1M-pixel textures; term order keeps rounding identical to the generic path.
   const pixels = imageData.data
   const termCount = preset.exponents.length
   const coefficients = new Float64Array(termCount * 3)

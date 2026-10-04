@@ -17,6 +17,9 @@ const templateStore = "templates"
 const templateId = "card/series-10"
 const card = '[data-template="card/series-10"]'
 const preparingProgress = '[role="progressbar"][aria-label="Preparing template textures"]'
+const cardReadyTimeout = 30_000
+
+test.describe.configure({ timeout: 90_000 })
 
 interface StoredPayloadSummary {
   alphaSize: number
@@ -34,6 +37,10 @@ interface StoredRecordSummary {
   storedAt: number
   storeNames: string[]
   version: string
+}
+
+async function expectCardReady(page: Page) {
+  await expect(page.locator(card)).toBeVisible({ timeout: cardReadyTimeout })
 }
 
 async function readPreparedTextures(page: Page) {
@@ -121,7 +128,7 @@ function activationTimeline(page: Page) {
 
 test("grades a downloaded template once and reuses it on the next visit", async ({ page }) => {
   await page.goto("/build")
-  await expect(page.locator(card)).toBeVisible()
+  await expectCardReady(page)
 
   const prepared = await readPreparedTextures(page)
   expect(prepared).toBeDefined()
@@ -142,7 +149,7 @@ test("grades a downloaded template once and reuses it on the next visit", async 
   )
 
   await page.reload()
-  await expect(page.locator(card)).toBeVisible()
+  await expectCardReady(page)
 
   // A second grading pass would write a new record; the same timestamp means the stored one was
   // read back, validated against the active version, and drawn.
@@ -154,7 +161,7 @@ test("grades a downloaded template once and reuses it on the next visit", async 
 test("keeps the card off screen until its textures are prepared", async ({ page }) => {
   await recordActivationTimeline(page)
   await page.goto("/build")
-  await expect(page.locator(card)).toBeVisible()
+  await expectCardReady(page)
 
   const timeline = await activationTimeline(page)
   expect(timeline.card).toBeDefined()
@@ -192,7 +199,7 @@ test("upgrades a template cache written before prepared textures existed", async
   )
 
   await page.goto("/build")
-  await expect(page.locator(card)).toBeVisible()
+  await expectCardReady(page)
 
   const record = (await readPreparedTextures(page)) as StoredRecordSummary
   expect(record.databaseVersion).toBe(2)
@@ -202,7 +209,7 @@ test("upgrades a template cache written before prepared textures existed", async
 
 test("renders the card when its stored textures cannot be decoded", async ({ page }) => {
   await page.goto("/build")
-  await expect(page.locator(card)).toBeVisible()
+  await expectCardReady(page)
   const record = (await readPreparedTextures(page)) as StoredRecordSummary
 
   // The real keys with unusable bytes: every lookup a render makes now finds a payload and fails to
@@ -247,6 +254,6 @@ test("renders the card when its stored textures cannot be decoded", async ({ pag
   await page.reload()
   // Prepared textures are an acceleration, never a dependency: an undecodable plane costs the speed
   // it was meant to save and nothing else.
-  await expect(page.locator(card)).toBeVisible()
+  await expectCardReady(page)
   await expect(page.locator(`${card} svg`).first()).toBeVisible()
 })

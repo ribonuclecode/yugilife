@@ -82,13 +82,6 @@ function ReleaseTag({
   )
 }
 
-/**
- * A post title with its release flag at the end of it.
- *
- * The flag is inside the heading rather than beside it, so the line breaker treats it as one more
- * word in the sentence: it follows the last word when there is room and moves down on its own when
- * there is not. As a sibling of the heading it could only ever sit under the whole title.
- */
 function TimelineTitle({ post }: { post: BlogPostMetadata }) {
   if (post.kind !== "release") return post.title
 

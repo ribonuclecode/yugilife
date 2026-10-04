@@ -69,12 +69,8 @@ export interface TextPosition {
 }
 
 /**
- * A presentation-only gate on resolved artwork transform modes, keyed by shared transform ID. Every
- * entry must match: a string requires that exact opaque mode, and `null` requires the transform to
- * carry no mode at all.
- *
- * Presentation may read transform modes but must never assign them. Transforms are resolved input,
- * so this gate cannot participate in a cycle — keeping that asymmetry is what makes it safe.
+ * Shared transform ID -> required mode, or `null` for no mode. Presentation may read transform
+ * modes but must never assign them, which keeps resolution acyclic.
  */
 export type TransformModeCondition = Readonly<Record<string, string | null>>
 

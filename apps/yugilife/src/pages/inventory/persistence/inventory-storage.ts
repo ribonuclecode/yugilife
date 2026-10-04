@@ -1,3 +1,6 @@
+import { requestResult, transactionComplete } from "@/lib/indexed-db"
+import { isRecord } from "@/lib/utils"
+
 import { inventoryPreviewMatchesCard } from "../model/inventory-preview"
 
 import type { EditorDocumentState } from "../../build/editor/model/editor-document"
@@ -90,10 +93,6 @@ function createId() {
   )
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
-
 function isAssetReference(value: unknown): value is CardAssetReference {
   return isRecord(value) && value.format === assetReferenceFormat && typeof value.id === "string"
 }
@@ -112,33 +111,6 @@ function referencedAssetIds(cards: Iterable<PersistedInventoryCard>) {
     }
   }
   return referenced
-}
-
-function requestResult<T>(request: IDBRequest<T>) {
-  return new Promise<T>((resolve, reject) => {
-    request.addEventListener("success", () => resolve(request.result), { once: true })
-    request.addEventListener(
-      "error",
-      () => reject(request.error ?? new Error("IndexedDB request failed")),
-      { once: true },
-    )
-  })
-}
-
-function transactionComplete(transaction: IDBTransaction) {
-  return new Promise<void>((resolve, reject) => {
-    transaction.addEventListener("complete", () => resolve(), { once: true })
-    transaction.addEventListener(
-      "abort",
-      () => reject(transaction.error ?? new Error("IndexedDB transaction aborted")),
-      { once: true },
-    )
-    transaction.addEventListener(
-      "error",
-      () => reject(transaction.error ?? new Error("IndexedDB transaction failed")),
-      { once: true },
-    )
-  })
 }
 
 let databasePromise: Promise<IDBDatabase> | undefined
@@ -161,8 +133,7 @@ function openDatabase() {
       const metadata = database.objectStoreNames.contains(metadataStore)
         ? request.transaction!.objectStore(metadataStore)
         : database.createObjectStore(metadataStore, { keyPath: "key" })
-      // Only a database created by this schema is seed-eligible. Upgrading any existing database,
-      // including one whose owner deliberately deleted every card, must never repopulate it.
+      // Only a newly created database is seed-eligible; upgrades must never repopulate it.
       metadata.put(bootstrapMetadata(event.oldVersion === 0 ? "pending" : "complete"))
     })
     request.addEventListener("success", () => resolve(request.result), { once: true })
@@ -402,7 +373,6 @@ export async function saveInventoryCard(card: InventoryCard) {
   }
 }
 
-/** Commits authored card data and its matching rendered preview as one inventory snapshot. */
 export async function saveInventoryCardSnapshot(
   card: InventoryCard,
   preview: InventoryCardPreview,
@@ -499,10 +469,6 @@ function seedMemoryInventory(prepared: ReturnType<typeof prepareSeedSnapshots>) 
   return true
 }
 
-/**
- * Atomically installs the product's starter collection only for a database created as pristine.
- * Existing databases are permanently ineligible, even when their owner has deleted every card.
- */
 export async function seedInventoryIfPristine(
   createSnapshots: () => Promise<readonly InventorySeedSnapshot[]>,
 ) {

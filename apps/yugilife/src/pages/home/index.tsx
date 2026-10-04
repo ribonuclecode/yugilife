@@ -29,9 +29,7 @@ const contactLinks = [
   { href: githubProfile, label: "Github" },
 ] as const
 
-/** The published catalog is the source of truth; this holds only until its manifest answers. */
 const fallbackCardCount = 14_000
-/** The page never waits longer than this on the manifest before it reveals. */
 const countsWaitMs = 1500
 
 function decodeImage(src: string) {
@@ -58,11 +56,6 @@ async function fetchCatalogCardCount(): Promise<number | undefined> {
 
 const order = (value: number) => ({ "--order": value }) as CSSProperties
 
-/**
- * Discord's mark alone, drawn in the tile's own ink rather than the brand's blurple. The eyes are
- * drawn over a solid mark in the tile's surface colour, so they can close: a blink squashes them to
- * a slit, and a laugh swaps them for two happy arcs.
- */
 function DiscordMark({ className }: { className?: string }) {
   return (
     <svg aria-hidden="true" className={className} fill="currentColor" viewBox="36 110 440 300">
@@ -82,10 +75,6 @@ function DiscordMark({ className }: { className?: string }) {
   )
 }
 
-/**
- * The sparks the Discord mark throws when it spins: angle in degrees, reach in px, size in px, and a
- * lag in ms so they leave one after another rather than as a ring.
- */
 const discordSparks = [
   [8, 34, 5, 0],
   [52, 28, 3, 60],
@@ -97,7 +86,6 @@ const discordSparks = [
   [316, 31, 3, 70],
 ] as const
 
-/** The spin's sparks, laid over the mark but outside it, so they fly out straight, unspun. */
 function DiscordSparks() {
   return (
     <span aria-hidden="true" className="bento-discord-sparks">
@@ -128,14 +116,11 @@ export function Home({ onReady = () => undefined }: { onReady?: () => void }) {
   const bentoRef = useRef<HTMLDivElement>(null)
 
   usePageTransitionReady(ready)
-  // The pointer-lit tile borders. Off for now; pass `true` to bring them back.
   useBorderGlow(bentoRef, false)
 
   useEffect(() => {
     let cancelled = false
     const images = Promise.all([kuribohPlate, kuribohFigure].map(decodeImage))
-    // The headline is set partly in the card-name typeface; revealing before it loads would show
-    // the fallback serif for a frame and then swap.
     const typeface = document.fonts.load('1em "Matrix Small Caps"').catch(() => undefined)
     const catalog = Promise.race([
       fetchCatalogCardCount(),
@@ -155,8 +140,6 @@ export function Home({ onReady = () => undefined }: { onReady?: () => void }) {
     if (ready) onReady()
   }, [ready, onReady])
 
-  // Tiles follow the app's shape preference: the pill setting gets deep, soft corners, the
-  // rounded setting a tighter version of the same grid.
   const style = { "--bento-radius": bgRadius > 8 ? "28px" : "14px" } as CSSProperties
 
   return (
@@ -222,7 +205,6 @@ export function Home({ onReady = () => undefined }: { onReady?: () => void }) {
 
         <Link className="bento-tile bento-link bento-blog" style={order(5)} to="/blog">
           <span className="bento-eyebrow text-muted-foreground">Blog</span>
-          {/* The flag is the word "release", set inline so the title wraps around it as text. */}
           <span className="bento-link-title">
             <ReleaseFlag className="bento-title-flag" /> notes, behind the scenes, and more!
           </span>

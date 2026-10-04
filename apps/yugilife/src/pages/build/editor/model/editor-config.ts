@@ -28,8 +28,7 @@ import type {
 export const editorTemplateId = DEFAULT_TEMPLATE.id
 export const editorTemplateVersion = DEFAULT_TEMPLATE.version
 export const editorTemplate = DEFAULT_TEMPLATE.template
-export const editorTemplateName = DEFAULT_TEMPLATE.name
-export const editorCardFields = editorTemplate.cardFields
+const editorCardFields = editorTemplate.cardFields
 export const editorLayerGroups = collectLayerGroups(editorTemplate)
 export const editorLayerIds = new Set(
   editorLayerGroups.flatMap((group) => group.layers.map(({ id }) => id)),
@@ -37,7 +36,6 @@ export const editorLayerIds = new Set(
 export const editorDefaultLayerVisibility = defaultLayerVisibility(editorTemplate)
 export const editorColorPresets = DEFAULT_TEMPLATE.colorPresets
 
-/** Text-fit controls explicitly exposed beside template fields in Automatic mode. */
 export const automaticTextFitLayerIds = new Set(
   editorCardFields.flatMap((field) => (field.automaticFitLayer ? [field.automaticFitLayer] : [])),
 )
@@ -51,23 +49,14 @@ export function createInitialCard() {
 }
 
 export interface ArtworkEditorConfig {
-  /** The image field the template's primary artwork layer consumes. */
   field: string
-  /** The image field used by the template's artwork overlay mask. */
   maskField?: string
-  /** The source channel the template uses for mask coverage. */
   maskChannel: "alpha" | "luminance"
-  /** Shared transform used by the primary artwork layer and any overlay layers. */
   transformId: string
-  /** Whether the template explicitly permits a full-card artwork overlay. */
   supportsFullArt: boolean
 }
 
-/** Derives artwork authoring capabilities from the active template instead of hard-coding layer IDs. */
 export function artworkEditorConfig(template = editorTemplate): ArtworkEditorConfig {
-  // The primary artwork layer is the unconditional one: overlay variants are gated behind an
-  // opaque transform mode. Its card field is the artwork source every editor control authors, so
-  // the app derives that name from the template rather than assuming one.
   const artworkLayers: ArtworkLayer[] = []
   walkLayers(template.layers, ({ layer }) => {
     if (layer.kind === "artwork") artworkLayers.push(layer as ArtworkLayer)
@@ -103,21 +92,18 @@ export function artworkEditorConfig(template = editorTemplate): ArtworkEditorCon
   }
 }
 
-/** The default template's artwork field, for modules that are not given an active template. */
 export const editorArtworkField = artworkEditorConfig().field
 
-export function isDefaultArtworkMaskEffects(effects: ArtworkMaskEffects | undefined) {
+function isDefaultArtworkMaskEffects(effects: ArtworkMaskEffects | undefined) {
   return effects?.antiAlias !== true && (effects?.glow ?? 0) === 0
 }
 
-/** Presentation overrides are sparse; an identity transform is the template default. */
 export function isDefaultArtworkTransform(transform: ArtworkTransform) {
   return (
     transform.scale === 1 && transform.x === 0 && transform.y === 0 && transform.mode === undefined
   )
 }
 
-/** The zoom full art opens at: the framed placement leaves too much card showing through. */
 const FULL_ART_START_SCALE = 1.5
 
 export function hasArtworkCrop(transform: ArtworkTransform) {
@@ -125,14 +111,6 @@ export function hasArtworkCrop(transform: ArtworkTransform) {
   return transform.scale !== scale || transform.x !== x || transform.y !== y
 }
 
-/**
- * Returns the artwork to where the layout starts it, keeping the layout mode.
- *
- * Zoom and pan are a crop; full art is a layout the card is built in. Clearing the crop must not
- * decide the layout question on the author's behalf — dropping the mode here would switch the card
- * back to a framed artwork and tear down the workspace the button lives beside. Full art has its
- * own starting zoom, so resetting inside it lands there rather than on the framed placement.
- */
 export function resetArtworkCrop(transform: ArtworkTransform): ArtworkTransform {
   return {
     mode: transform.mode,
@@ -142,10 +120,6 @@ export function resetArtworkCrop(transform: ArtworkTransform): ArtworkTransform 
   }
 }
 
-/**
- * Enables the overlay clipping mode with the useful 150% starting zoom once. Disabling full art
- * returns the artwork to the template identity so the temporary full-art crop does not linger.
- */
 export function toggleArtworkFullArt(transform: ArtworkTransform): ArtworkTransform {
   if (transform.mode === "full-art") return { scale: 1, x: 0, y: 0 }
   return {
@@ -155,7 +129,6 @@ export function toggleArtworkFullArt(transform: ArtworkTransform): ArtworkTransf
   }
 }
 
-/** The expensive side-by-side mask workspace exists only while full-art editing is active. */
 export function shouldRenderArtworkWorkspace(
   artwork: unknown,
   transform: ArtworkTransform | undefined,
@@ -163,13 +136,6 @@ export function shouldRenderArtworkWorkspace(
   return artwork instanceof Blob && transform?.mode === "full-art"
 }
 
-/**
- * Projects the persisted card into the values used by the automatic preview/export. Advanced-only
- * fields remain persisted, but they cannot override semantic auto-derivation while automatic mode
- * is selected. Presentation overrides are separate from this card projection and remain effective
- * in both editor modes. Semantic bindings and semantic text paths derive displayed values from the
- * projected card without requiring app-level knowledge of a particular card family.
- */
 export function projectCardForEditorMode(
   card: CardData,
   mode: EditorMode,
@@ -184,11 +150,6 @@ export function projectCardForEditorMode(
   ) as CardData
 }
 
-/**
- * Projects the complete editor document into the card sources consumed by preview and export.
- * Artwork masks are editor-owned state, so they must be applied here instead of relying on the
- * hidden legacy `card.artworkOverlay` field being synchronized by every save path.
- */
 export function projectCardForRender(
   card: CardData,
   mode: EditorMode,
@@ -204,7 +165,6 @@ export function projectCardForRender(
   }
 }
 
-/** Returns the template-declared card inputs that Automatic mode should expose. */
 export function editorCardFieldsForMode(
   card: CardData,
   mode: "automatic" | "advanced",
@@ -345,12 +305,6 @@ function activePresentationSubjects(
   return { activeLayerIds, activePresetTargets }
 }
 
-/**
- * Text styles that may expose generated color/outline controls: currently rendered layers whose
- * `editorVisible` flag is not `false`. This is the same declared policy the generated layer-
- * visibility controls already use, so a renderer-only implementation layer never grows a paint
- * control and no Series-specific list is needed here.
- */
 export function paintableTextStyles(
   layers: Readonly<Record<string, boolean | undefined>>,
   presentation: ResolvedCardPresentation,
@@ -408,7 +362,6 @@ function formatTypographyPatch(patch: Readonly<Record<string, unknown>>) {
     .join(", ")
 }
 
-/** Returns explicit presentation choices that currently affect the resolved template presentation. */
 export function getActivePresentationOverrides(
   layers: Readonly<Record<string, boolean | undefined>>,
   presetOverrides: Readonly<Record<string, string>>,
@@ -537,7 +490,6 @@ export function getActivePresentationOverrides(
   return active
 }
 
-/** Counts explicit presentation choices that change the current resolved template presentation. */
 export function countActivePresentationOverrides(
   layers: Readonly<Record<string, boolean | undefined>>,
   presetOverrides: Readonly<Record<string, string>>,

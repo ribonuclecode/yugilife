@@ -22,14 +22,6 @@ import type {
   TransformModeCondition,
 } from "./contracts/index.js"
 
-/**
- * Evaluates the combined card-data and transform-mode gate shared by presentation rules and semantic
- * text styles. Both clauses are required to match, and a construct that declares neither is rejected
- * during template validation rather than here.
- *
- * Every consumer that asks "is this rule or style currently active?" must route through this one
- * function, so a gate can never be honored by resolution and ignored by render-manifest analysis.
- */
 export function matchesPresentationGate(
   semantics: CardSemantics,
   transforms: ArtworkTransformOverrides,
@@ -57,21 +49,20 @@ function matchingPresentationRules(
   )
 }
 
-function resolveRuleValues<T extends boolean | string>(
+function resolveRuleEntries<T>(
   rules: readonly SemanticPresentationRule[],
   select: (rule: SemanticPresentationRule) => Readonly<Record<string, T>> | undefined,
-  subject: string,
+  describeConflict: (key: string) => string,
+  equals: (left: T, right: T) => boolean = Object.is,
 ) {
   const values: Record<string, T> = {}
   const owners: Record<string, string> = {}
   rules.forEach((rule) => {
-    const selected = select(rule)
-    if (!selected) return
-    Object.entries(selected).forEach(([key, value]) => {
+    Object.entries(select(rule) ?? {}).forEach(([key, value]) => {
       const previous = values[key]
-      if (previous !== undefined && previous !== value) {
+      if (previous !== undefined && !equals(previous, value)) {
         throw new Error(
-          `Semantic presentation rules "${owners[key]}" and "${rule.id}" resolve ${subject} "${key}" differently.`,
+          `Semantic presentation rules "${owners[key]}" and "${rule.id}" ${describeConflict(key)}.`,
         )
       }
       values[key] = value
@@ -79,6 +70,14 @@ function resolveRuleValues<T extends boolean | string>(
     })
   })
   return values
+}
+
+function resolveRuleValues<T extends boolean | string>(
+  rules: readonly SemanticPresentationRule[],
+  select: (rule: SemanticPresentationRule) => Readonly<Record<string, T>> | undefined,
+  subject: string,
+) {
+  return resolveRuleEntries(rules, select, (key) => `resolve ${subject} "${key}" differently`)
 }
 
 function resolveLayerOptions(rules: readonly SemanticPresentationRule[]) {
@@ -109,50 +108,36 @@ function resolveLayerOptions(rules: readonly SemanticPresentationRule[]) {
 }
 
 function resolveTextPositions(rules: readonly SemanticPresentationRule[]) {
-  const positions: Record<string, TextPosition> = {}
-  const owners: Record<string, string> = {}
-  rules.forEach((rule) => {
-    Object.entries(rule.textPositions ?? {}).forEach(([layerId, position]) => {
-      const previous = positions[layerId]
-      if (previous && (previous.x !== position.x || previous.y !== position.y)) {
-        throw new Error(
-          `Semantic presentation rules "${owners[layerId]}" and "${rule.id}" resolve text layer "${layerId}" to different positions.`,
-        )
-      }
-      positions[layerId] = Object.freeze({ x: position.x, y: position.y })
-      owners[layerId] = rule.id
-    })
-  })
-  return positions
+  const positions = resolveRuleEntries<TextPosition>(
+    rules,
+    (rule) => rule.textPositions,
+    (layerId) => `resolve text layer "${layerId}" to different positions`,
+    (left, right) => left.x === right.x && left.y === right.y,
+  )
+  return Object.fromEntries(
+    Object.entries(positions).map(([layerId, { x, y }]) => [layerId, Object.freeze({ x, y })]),
+  )
 }
 
 function resolveLayerRegions(rules: readonly SemanticPresentationRule[]) {
-  const regions: Record<string, Region> = {}
-  const owners: Record<string, string> = {}
-  rules.forEach((rule) => {
-    Object.entries(rule.layerRegions ?? {}).forEach(([layerId, region]) => {
-      const previous = regions[layerId]
-      if (
-        previous &&
-        (previous.x !== region.x ||
-          previous.y !== region.y ||
-          previous.width !== region.width ||
-          previous.height !== region.height)
-      ) {
-        throw new Error(
-          `Semantic presentation rules "${owners[layerId]}" and "${rule.id}" resolve layer "${layerId}" to different regions.`,
-        )
-      }
-      regions[layerId] = Object.freeze({
-        height: region.height,
-        width: region.width,
-        x: region.x,
-        y: region.y,
-      })
-      owners[layerId] = rule.id
-    })
-  })
-  return Object.freeze(regions)
+  const regions = resolveRuleEntries<Region>(
+    rules,
+    (rule) => rule.layerRegions,
+    (layerId) => `resolve layer "${layerId}" to different regions`,
+    (left, right) =>
+      left.x === right.x &&
+      left.y === right.y &&
+      left.width === right.width &&
+      left.height === right.height,
+  )
+  return Object.freeze(
+    Object.fromEntries(
+      Object.entries(regions).map(([layerId, { height, width, x, y }]) => [
+        layerId,
+        Object.freeze({ height, width, x, y }),
+      ]),
+    ),
+  )
 }
 
 function resolveLayerMasks(
@@ -231,7 +216,6 @@ function fitProfileOverride(
   return profileId
 }
 
-/** Resolves semantics into template appearance, then applies explicit user presentation overrides. */
 export function resolveCardPresentation(
   template: CardTemplate,
   semantics: CardSemantics,
@@ -240,8 +224,7 @@ export function resolveCardPresentation(
   const validatedOverrides = overrides
     ? validatePresentationOverrides(overrides, template)
     : undefined
-  // Transforms are resolved input rather than rule output, so reading them here cannot create a
-  // cycle: no presentation rule may assign a transform mode.
+  // Rules may read transform modes but never assign them, so this cannot form a cycle.
   const artworkTransforms = Object.freeze({ ...(validatedOverrides?.artworkTransforms ?? {}) })
   const rules = matchingPresentationRules(template, semantics, artworkTransforms)
   const text: Record<string, ResolvedTextPresentation> = {}

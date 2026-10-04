@@ -18,13 +18,12 @@ import type {
 
 export const templateBundleFormat = "yugilife/template-bundle" as const
 export const templateSourceFormat = "yugilife/template-source" as const
-export const currentTemplateDocumentSchemaVersion = 1
+const currentTemplateDocumentSchemaVersion = 1
 
-/** JSON is deliberately bounded before parsing so a dropped file cannot freeze the editor. */
 export const maximumTemplateDocumentBytes = 64 * 1024 * 1024
-export const maximumTemplateAssetCount = 256
-export const maximumTemplateAssetBytes = 32 * 1024 * 1024
-export const maximumSingleTemplateAssetBytes = 16 * 1024 * 1024
+const maximumTemplateAssetCount = 256
+const maximumTemplateAssetBytes = 32 * 1024 * 1024
+const maximumSingleTemplateAssetBytes = 16 * 1024 * 1024
 
 const coreLayerKinds = new Set([
   "artwork",
@@ -164,17 +163,22 @@ function validateRendererSurface(template: CardTemplate) {
   })
 }
 
-function referencedAssetIds(template: CardTemplate) {
+function collectTemplateReferences(
+  template: CardTemplate,
+  directKeys: ReadonlySet<string>,
+  mapKey: string,
+) {
   const references = new Set<string>()
+  const addString = (value: unknown) => {
+    if (typeof value === "string") references.add(value)
+  }
   const visit = (value: unknown, key?: string) => {
-    if (key === "assetId" || key === "fontAssetId") {
-      if (typeof value === "string") references.add(value)
+    if (key !== undefined && directKeys.has(key)) {
+      addString(value)
       return
     }
-    if (key === "assetSelections" && typeof value === "object" && value !== null) {
-      Object.values(value).forEach((assetId) => {
-        if (typeof assetId === "string") references.add(assetId)
-      })
+    if (key === mapKey && typeof value === "object" && value !== null) {
+      Object.values(value).forEach(addString)
     }
     if (Array.isArray(value)) {
       value.forEach((entry) => visit(entry))
@@ -187,24 +191,12 @@ function referencedAssetIds(template: CardTemplate) {
   return references
 }
 
+function referencedAssetIds(template: CardTemplate) {
+  return collectTemplateReferences(template, new Set(["assetId", "fontAssetId"]), "assetSelections")
+}
+
 function referencedPresetNames(template: CardTemplate) {
-  const references = new Set<string>()
-  const visit = (value: unknown, key?: string) => {
-    if (key === "defaultPreset" && typeof value === "string") references.add(value)
-    if (key === "presets" && typeof value === "object" && value !== null) {
-      Object.values(value).forEach((preset) => {
-        if (typeof preset === "string") references.add(preset)
-      })
-    }
-    if (Array.isArray(value)) {
-      value.forEach((entry) => visit(entry))
-      return
-    }
-    if (typeof value !== "object" || value === null) return
-    Object.entries(value).forEach(([entryKey, entry]) => visit(entry, entryKey))
-  }
-  visit(template)
-  return references
+  return collectTemplateReferences(template, new Set(["defaultPreset"]), "presets")
 }
 
 function knownAssetExtension(path: string) {
@@ -280,8 +272,7 @@ export function validateTemplateBundle(
     }
     totalBytes += source.size
     validateAssetMime(assetId, definition.manifest.assets[assetId] ?? "", source)
-    // TODO(security): add parser-backed validation for raw SVG image assets. Until then, accepted
-    // SVG bytes are deliberately treated like any other bounded embedded asset.
+    // TODO(security): add parser-backed validation for raw SVG image assets.
   }
   if (totalBytes > maximumTemplateAssetBytes) {
     throw new Error(

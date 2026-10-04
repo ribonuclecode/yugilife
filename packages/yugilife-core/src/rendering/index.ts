@@ -9,11 +9,13 @@ import {
   validateSvgElementDefinition,
 } from "../validation.js"
 
-import { loadPresentationFonts, throwIfAborted } from "./assets.js"
+import { loadPresentationFonts } from "./assets.js"
+import { throwIfAborted } from "./async-resources.js"
 import { applyCanvasMask } from "./canvas-masks.js"
 import { createDefaultLayerRenderers } from "./default-renderers.js"
 import { createLayerSourceFieldResolver } from "./layer-source-fields.js"
-import { assertLayerTree, findRenderer, isLayerVisible, rendererKey } from "./layers.js"
+import { isLayerVisible } from "./layer-tree.js"
+import { assertLayerTree, findRenderer, rendererKey } from "./layers.js"
 import { createRenderManifest as buildRenderManifest } from "./render-manifest.js"
 import { acquireScratchCanvas, releaseScratchCanvas } from "./scratch-canvas.js"
 import { outlineSvgText } from "./text-outlines.js"
@@ -21,7 +23,6 @@ import { outlineSvgText } from "./text-outlines.js"
 import type { CapturedRenderedElement } from "./render-manifest.js"
 
 export { resolveRasterOutputDimensions } from "../raster-export.js"
-export { createDefaultLayerRenderers } from "./default-renderers.js"
 
 import type {
   CardData,
@@ -32,6 +33,7 @@ import type {
   RenderLayerContext,
   RenderOptions,
   RenderSegment,
+  ResolvedLayerMask,
   SvgCardExportOptions,
   SvgElementDefinition,
 } from "../contracts/index.js"
@@ -67,22 +69,8 @@ async function renderCardWithManifestCapture(
   await loadPresentationFonts(presentation, assets, options.signal)
   throwIfAborted(options.signal)
 
-  /**
-   * A full-card surface this render owns outright.
-   *
-   * Used for the two kinds of surface that outlive the render or are identified by their address:
-   * the raster segments, which are handed to the caller and stay on screen until it replaces them,
-   * and the coverage surfaces, which `scopeMaskToCoverage` memoizes a scoped mask against by canvas
-   * identity. Neither may come from the scratch pool — a recycled segment would be repainted under
-   * a preview still showing it, and a recycled coverage surface would answer with the scoped mask
-   * of whatever render held it last. Isolation surfaces have neither property and are borrowed.
-   *
-   * `willReadFrequently` pins a surface to main memory, which costs every draw into it the GPU
-   * path: for a card-sized canvas that is a software blit per layer, paid again on every keystroke
-   * and every slider step of the interactive preview. Only ask for it where pixels are actually
-   * read back — the coverage surfaces that mask scoping and the manifest sample. Segment and
-   * isolation surfaces are drawn into and then drawn from, never sampled.
-   */
+  // Segments and coverage surfaces outlive this render, so they never come from the scratch pool.
+  // Only coverage is read back; `willReadFrequently` would force every other draw onto the CPU.
   function createRasterCanvas(readback = false) {
     const canvas = document.createElement("canvas")
     canvas.width = template.dimensions.width
@@ -153,6 +141,23 @@ async function renderCardWithManifestCapture(
     rasterDirty = false
   }
 
+  async function applyMask(canvas: HTMLCanvasElement, mask: ResolvedLayerMask) {
+    const coverage = mask.coverageLayerId ? layerAlphaCoverage.get(mask.coverageLayerId) : undefined
+    await applyCanvasMask(canvas, assets, mask, template.dimensions, coverage, options.signal)
+  }
+
+  function captureElement(
+    layer: LayerDefinition,
+    output: Pick<CapturedRenderedElement, "canvas" | "elements" | "kind">,
+  ) {
+    capturedElements.push({
+      ...output,
+      layerId: layer.id,
+      order: captureOrder++,
+      sourceFields: sourceFieldsForLayer?.(layer) ?? [],
+    })
+  }
+
   async function renderLayer(layer: LayerDefinition) {
     throwIfAborted(options.signal)
     const resolvedLayer = applyPresentationLayerOptions(applyPresentationLayerRegion(layer))
@@ -175,19 +180,15 @@ async function renderCardWithManifestCapture(
         ? createRasterCanvas(true)
         : undefined
     renderContext.coverageContext = layerCoverage?.context
-    // A masked layer composes away from the card so the mask can be applied to it alone, and is
-    // drawn into the card before this call returns — including when a nested layer throws, which
-    // is why the surface goes back in a `finally`. Nothing outside this scope ever holds it, so
-    // borrowing beats allocating: the card-sized surface is several megabytes, and a card with
-    // eight masked layers used to allocate and discard all eight on every keystroke.
-    const isolatedRaster = mask
-      ? acquireScratchCanvas(template.dimensions.width, template.dimensions.height)
+    // A masked layer composes in isolation and is drawn back before this call returns.
+    const isolation = mask
+      ? {
+          destination: renderContext.context,
+          mask,
+          scratch: acquireScratchCanvas(template.dimensions.width, template.dimensions.height),
+        }
       : undefined
-    let destinationContext: CanvasRenderingContext2D | undefined
-    if (isolatedRaster) {
-      destinationContext = renderContext.context
-      renderContext.context = isolatedRaster.context
-    }
+    if (isolation) renderContext.context = isolation.scratch.context
     try {
       let rendered: boolean | void
       try {
@@ -196,7 +197,7 @@ async function renderCardWithManifestCapture(
         throwIfAborted(options.signal)
         throw error
       } finally {
-        if (destinationContext) renderContext.context = destinationContext
+        if (isolation) renderContext.context = isolation.destination
         renderContext.coverageContext = previousCoverageContext
       }
       const emittedVectors = vectorLayers.slice(vectorStart)
@@ -207,98 +208,43 @@ async function renderCardWithManifestCapture(
           )
         }
         if (rendered !== false) {
-          if (mask) {
-            if (!isolatedRaster || !destinationContext) {
-              throw new Error(`Masked layer "${layer.id}" lost its isolated render canvas.`)
-            }
-            await applyCanvasMask(
-              isolatedRaster.canvas,
-              assets,
-              mask,
-              template.dimensions,
-              mask.coverageLayerId ? layerAlphaCoverage.get(mask.coverageLayerId) : undefined,
-              options.signal,
-            )
-            if (layerCoverage) {
-              await applyCanvasMask(
-                layerCoverage.canvas,
-                assets,
-                mask,
-                template.dimensions,
-                mask.coverageLayerId ? layerAlphaCoverage.get(mask.coverageLayerId) : undefined,
-                options.signal,
-              )
-            }
-            destinationContext.drawImage(isolatedRaster.canvas, 0, 0)
+          if (isolation) {
+            await applyMask(isolation.scratch.canvas, isolation.mask)
+            if (layerCoverage) await applyMask(layerCoverage.canvas, isolation.mask)
+            isolation.destination.drawImage(isolation.scratch.canvas, 0, 0)
           }
           if (layerCoverage && coverageLayerIds.has(resolvedLayer.id)) {
             layerAlphaCoverage.set(resolvedLayer.id, layerCoverage.canvas)
           }
-          if (captureManifest) {
-            if (!layerCoverage) {
-              throw new Error(`Raster layer "${layer.id}" lost its alpha coverage canvas.`)
-            }
-            capturedElements.push({
-              canvas: layerCoverage.canvas,
-              kind: "image",
-              layerId: layer.id,
-              order: captureOrder++,
-              sourceFields: sourceFieldsForLayer?.(layer) ?? [],
-            })
+          if (captureManifest && layerCoverage) {
+            captureElement(layer, { canvas: layerCoverage.canvas, kind: "image" })
           }
           rasterDirty = true
         }
       } else if (renderer.output === "container") {
-        if (mask && emittedVectors.length > 0) {
-          throw new Error(
-            `Masked container layer "${layer.id}" emitted vector output. Split mixed output into separate ordered layers.`,
-          )
-        }
-        if (mask && isolatedRaster) {
-          await applyCanvasMask(
-            isolatedRaster.canvas,
-            assets,
-            mask,
-            template.dimensions,
-            mask.coverageLayerId ? layerAlphaCoverage.get(mask.coverageLayerId) : undefined,
-            options.signal,
-          )
-          if (!destinationContext) {
-            throw new Error(`Masked group "${layer.id}" lost its destination canvas.`)
+        if (isolation) {
+          if (emittedVectors.length > 0) {
+            throw new Error(
+              `Masked container layer "${layer.id}" emitted vector output. Split mixed output into separate ordered layers.`,
+            )
           }
-          destinationContext.drawImage(isolatedRaster.canvas, 0, 0)
+          await applyMask(isolation.scratch.canvas, isolation.mask)
+          isolation.destination.drawImage(isolation.scratch.canvas, 0, 0)
           for (const captured of captureManifest ? capturedElements.slice(captureStart) : []) {
-            if (captured.canvas) {
-              await applyCanvasMask(
-                captured.canvas,
-                assets,
-                mask,
-                template.dimensions,
-                mask.coverageLayerId ? layerAlphaCoverage.get(mask.coverageLayerId) : undefined,
-                options.signal,
-              )
-            }
+            if (captured.canvas) await applyMask(captured.canvas, isolation.mask)
           }
           rasterDirty = true
         }
-      } else if (renderer.output === "vector") {
-        if (emittedVectors.length > 0) {
-          flushRasterSegment()
-          appendVectorSegment(emittedVectors)
-          if (captureManifest) {
-            capturedElements.push({
-              elements: Object.freeze([...emittedVectors]),
-              kind: "svg",
-              layerId: layer.id,
-              order: captureOrder++,
-              sourceFields: sourceFieldsForLayer?.(layer) ?? [],
-            })
-          }
+      } else if (emittedVectors.length > 0) {
+        flushRasterSegment()
+        appendVectorSegment(emittedVectors)
+        if (captureManifest) {
+          captureElement(layer, { elements: Object.freeze([...emittedVectors]), kind: "svg" })
         }
       }
       throwIfAborted(options.signal)
     } finally {
-      if (isolatedRaster) releaseScratchCanvas(isolatedRaster)
+      if (isolation) releaseScratchCanvas(isolation.scratch)
     }
   }
   const renderContext: RenderLayerContext = {
@@ -395,8 +341,6 @@ async function renderCardWithManifestCapture(
         )
     void renderManifestPromise.then(
       () => {
-        // The completed manifest retains compact alpha arrays and vector definitions; full-card
-        // recording canvases are no longer needed after preparation.
         completedCaptures = Object.freeze([])
       },
       () => {},

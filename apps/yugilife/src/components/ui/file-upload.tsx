@@ -30,7 +30,6 @@ interface ImageDropzoneProps extends Omit<
   accept?: string
   alt?: string
   actionsOverlay?: boolean
-  /** Optional control surface joined directly to the bottom of the image input. */
   attachedFooter?: ReactNode
   defaultValue?: Blob | null
   disabled?: boolean
@@ -426,7 +425,5 @@ const ImageDropzone = forwardRef<HTMLDivElement, ImageDropzoneProps>(
 
 ImageDropzone.displayName = "ImageDropzone"
 
-const FileUpload = ImageDropzone
-
-export { FileUpload, ImageDropzone }
+export { ImageDropzone }
 export type { ImageDropzoneProps }

@@ -4,23 +4,12 @@ import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } fro
 
 import { subscribeDeviceTilt } from "@/lib/device-tilt"
 
-/** How far each layer travels at the edge of the pointer's reach, in px. */
 const figureTravel = { x: 18, y: 12 }
 const plateTravel = { x: -6, y: -4 }
 const parallaxSpring = { damping: 24, mass: 0.6, stiffness: 120 }
 
 const clamp = (value: number) => Math.min(1, Math.max(-1, value))
 
-/**
- * An artwork whose subject steps out of its own frame: the full-art layout, shown as a layout.
- *
- * Two layers share one oversized square on the tile's centre: a clean plate, the background with
- * the subject painted out, cropped by a frame the size of the tile; and the subject's cutout,
- * outside the frame and uncropped, so wherever it reaches past the tile it is drawn over the
- * neighbours. Because the plate no longer contains the subject, the two can move independently: the
- * pointer, or the phone's tilt, shifts the subject further than the plate, which reads as depth.
- * Only transforms change, and reduced motion keeps both layers still.
- */
 export function BreakoutArt({
   alt,
   figure,

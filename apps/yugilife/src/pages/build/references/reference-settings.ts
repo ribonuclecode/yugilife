@@ -1,3 +1,4 @@
+import { errorMessage, isRecord } from "@/lib/utils"
 export interface ReferenceTransform {
   rotation: number
   scaleX: number
@@ -19,10 +20,6 @@ export const defaultReferenceTransform: ReferenceTransform = {
 const referenceTransformsKey = "yugilife.reference-transforms"
 const comparisonModeKey = "yugilife.reference-comparison-mode"
 const referenceOpacityKey = "yugilife.reference-opacity"
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
 
 function localStorageOrUndefined() {
   try {
@@ -56,7 +53,7 @@ function normalizeReferenceTransform(value: unknown): ReferenceTransform | undef
 }
 
 function settingError(subject: string, error: unknown) {
-  const detail = error instanceof Error ? error.message : String(error)
+  const detail = errorMessage(error)
   return `${subject}: ${detail}`
 }
 

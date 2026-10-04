@@ -16,13 +16,6 @@ import { previewUpdateDescription } from "./use-inventory-controller"
 
 import type { useInventoryController } from "./use-inventory-controller"
 
-/**
- * The error toast's entrance: a short settle from slightly above, with no bounce, matching the
- * panel tier used elsewhere.
- *
- * `x` is a motion value rather than a Tailwind `-translate-x-1/2` because Framer writes an inline
- * `transform` that would overwrite the class.
- */
 const errorMotion = {
   initial: { opacity: 0, scale: 0.97, x: "-50%", y: -6 },
   animate: { opacity: 1, scale: 1, x: "-50%", y: 0 },
@@ -63,11 +56,6 @@ export function InventoryView({ controller }: InventoryViewProps) {
   } = controller
 
   const updateInProgress = previewRefresh !== undefined || previewRefreshMessage !== undefined
-  /**
-   * The tiles stand on the page, not on a panel, and the outlined variant paints no fill of its
-   * own — so the gallery would show through their labels. One step up the surface ladder gives
-   * each tile its own substrate, carrying the same weight the update's panel has.
-   */
   const tileSurface = surfaceClasses(useSurface() + 1, 3)
 
   return (
@@ -133,18 +121,12 @@ export function InventoryView({ controller }: InventoryViewProps) {
                 selectedCardId={selectedCardId}
               />
 
-              {/* The collection's own actions sit on the page rather than on a surface of their
-                  own: a panel here would be a second card competing with the gallery. The panel
-                  belongs to the update — it grows out of the two buttons when the work starts and
-                  collapses back into them when it is over. */}
               <footer className="absolute inset-x-3 bottom-2 z-40 flex justify-center sm:inset-x-5 sm:bottom-4">
                 <motion.div
                   className={`flex min-w-0 justify-center ${updateInProgress ? "w-full max-w-2xl" : "w-auto"}`}
                   layout
                   transition={spring.moderate}
                 >
-                  {/* `popLayout` takes the leaving state out of the flow immediately, so the box
-                      above resizes to whatever is arriving instead of to both at once. */}
                   <AnimatePresence initial={false} mode="popLayout">
                     {previewRefresh ? (
                       <motion.div {...dockSwap} className="w-full" key="progress">
@@ -175,9 +157,6 @@ export function InventoryView({ controller }: InventoryViewProps) {
                         </Elevated>
                       </motion.div>
                     ) : previewRefreshMessage ? (
-                      /* The outcome keeps the panel for its few seconds. Restoring the buttons
-                         underneath it would put the report and the control that produces it side
-                         by side, reading as a state rather than as something that just finished. */
                       <motion.div {...dockSwap} key="message">
                         <Elevated
                           aria-live="polite"
@@ -212,9 +191,6 @@ export function InventoryView({ controller }: InventoryViewProps) {
                           >
                             New
                           </Button>
-                          {/* Previews are only rendered when a card is saved or opened, so this is
-                            the one way to bring an untouched collection up to date with a new
-                            template. It re-renders every card, which is why it asks first. */}
                           <ConfirmDialog
                             confirmLabel="Update previews"
                             description={previewUpdateDescription(cards.length, previewStatus)}

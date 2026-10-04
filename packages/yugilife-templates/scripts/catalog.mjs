@@ -1,15 +1,17 @@
 import { readdir, readFile } from "node:fs/promises"
 import path from "node:path"
-import { fileURLToPath } from "node:url"
 
 import { tsImport } from "tsx/esm/api"
 
+import { listFiles } from "../../../scripts/list-files.mjs"
+
 import { isYugilifeRasterImage, losslessWebpFileName } from "./lossless-webp.mjs"
+import { packageDirectory } from "./paths.mjs"
 import { isYugilifeConvertibleFont, woff2FileName } from "./woff2.mjs"
 
 const [{ textTypographies, walkLayers }, templateValidation] = await Promise.all([
   tsImport("../../yugilife-core/src/rendering/layer-tree.js", import.meta.url),
-  tsImport("../../yugilife-core/src/template-shape.js", import.meta.url),
+  tsImport("../../yugilife-core/src/schema/index.js", import.meta.url),
 ])
 const {
   validateCardTemplateShape,
@@ -17,24 +19,14 @@ const {
   validateTemplateManifestShape,
 } = templateValidation
 
-export const packageDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-export const catalogDirectory = packageDirectory
+export { packageDirectory }
 
-const catalogFile = path.join(catalogDirectory, "catalog.json")
+const catalogFile = path.join(packageDirectory, "catalog.json")
 const developmentPathSegments = new Set(["presets", "references", "reports", "textures"])
 const developmentFileNames = new Set(["chromapair-config.json", "report.json"])
 
 async function findFiles(directory, basename) {
-  const entries = await readdir(directory, { withFileTypes: true })
-  return (
-    await Promise.all(
-      entries.map(async (entry) => {
-        const resolved = path.join(directory, entry.name)
-        if (entry.isDirectory()) return findFiles(resolved, basename)
-        return entry.name === basename ? [resolved] : []
-      }),
-    )
-  ).flat()
+  return (await listFiles(directory)).filter((file) => path.basename(file) === basename)
 }
 
 async function readJson(file, description = catalogRelative(file)) {
@@ -56,8 +48,8 @@ function assertRelative(file, description) {
 }
 
 async function assertExactCasing(resolved, description) {
-  const relative = path.relative(catalogDirectory, resolved)
-  let cursor = catalogDirectory
+  const relative = path.relative(packageDirectory, resolved)
+  let cursor = packageDirectory
   for (const segment of relative.split(path.sep)) {
     const names = await readdir(cursor)
     if (!names.includes(segment)) {
@@ -77,7 +69,7 @@ async function assertExactCasing(resolved, description) {
 async function resolveCatalogFile(templateDirectory, relativePath, description) {
   assertRelative(relativePath, description)
   const resolved = path.resolve(templateDirectory, relativePath)
-  const relativeToCatalog = path.relative(catalogDirectory, resolved)
+  const relativeToCatalog = path.relative(packageDirectory, resolved)
   if (
     relativeToCatalog === "" ||
     relativeToCatalog === ".." ||
@@ -233,7 +225,7 @@ function validateManifestShape(manifest, manifestFile) {
 }
 
 async function discoverManifests() {
-  const manifestFiles = await findFiles(path.join(catalogDirectory, "templates"), "manifest.json")
+  const manifestFiles = await findFiles(path.join(packageDirectory, "templates"), "manifest.json")
   const manifests = new Map()
   for (const manifestFile of manifestFiles.sort()) {
     const manifest = await readJson(manifestFile)
@@ -405,7 +397,7 @@ async function loadBundledEntry({ manifest, manifestFile }) {
 }
 
 export function catalogRelative(file) {
-  return path.relative(catalogDirectory, file)
+  return path.relative(packageDirectory, file)
 }
 
 export async function loadCatalog() {

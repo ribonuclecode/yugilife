@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router"
 
 import { usePageTransitionReady } from "@/components/page-transition-ready"
+import { errorMessage } from "@/lib/utils"
 
 import { initializeInventory } from "../inventory/inventory-initialization"
 import {
@@ -22,9 +23,6 @@ export function Build() {
     return () => document.documentElement.classList.remove("build-route")
   }, [])
   if (!cardId) return <CurrentCardBuild />
-  // A route parameter change selects a different editor document. Keep the
-  // controller card-scoped so its async template restore and persistence refs
-  // cannot leak into the next card and hold the route transition open.
   return <CardBuild key={cardId} cardId={cardId} />
 }
 
@@ -55,9 +53,7 @@ function CurrentCardBuild() {
       writeActiveInventoryCardId(card.id)
       await navigate(`/build/${encodeURIComponent(card.id)}`, { replace: true })
     }
-    void openCurrentCard().catch((caught: unknown) =>
-      setError(caught instanceof Error ? caught.message : String(caught)),
-    )
+    void openCurrentCard().catch((caught: unknown) => setError(errorMessage(caught)))
   }, [navigate])
 
   return (

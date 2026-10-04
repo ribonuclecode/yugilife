@@ -10,11 +10,6 @@ export interface ArtworkWorkspaceSource {
   mask?: ImageBitmap
 }
 
-/**
- * The artwork pane is a display surface, not an export surface. Keeping its backing canvas
- * bounded prevents a large uploaded source from allocating several native-size RGBA canvases just
- * to show a few hundred CSS pixels in the playground. Core/export still receives the native mask.
- */
 const MAX_WORKSPACE_DIMENSION = 1024
 
 export function workspaceDimensions(sourceWidth: number, sourceHeight: number) {
@@ -61,11 +56,6 @@ export async function loadWorkspaceSource(artwork: Blob, mask: Blob | undefined)
   return { artwork: artworkResult.value, ...(maskBitmap ? { mask: maskBitmap } : {}) }
 }
 
-/**
- * Draw the workspace treatment into the artwork surface itself. Keeping this in the canvas
- * pipeline means the dimmed mask preview, moving stripes, and pin markers share exactly the same
- * bounds as the artwork instead of making the pane background look like part of the source image.
- */
 export function drawWorkspaceStripes(
   context: CanvasRenderingContext2D,
   stripeCanvas: HTMLCanvasElement,
@@ -106,11 +96,6 @@ export function drawWorkspaceStripes(
   context.drawImage(stripeCanvas, 0, 0)
 }
 
-/**
- * Converts either the database image mask or the live dot selection into core's canonical RGBA
- * mask representation. The alpha channel is foreground coverage; RGB is intentionally white so
- * the same representation can be reused for both dimming and stripe clipping.
- */
 export function createWorkspaceMaskPixels(
   source: ArtworkWorkspaceSource,
   width: number,
@@ -175,13 +160,10 @@ export function createWorkspaceMaskPixels(
 }
 
 interface WorkspaceMaskSurfaces {
-  /** Opaque grayscale coverage used with multiply to dim the background. */
   readonly foreground: HTMLCanvasElement
-  /** Transparent outside-background coverage used to destination-in the stripes. */
   readonly background: HTMLCanvasElement
 }
 
-/** Builds the two canvas views needed by the workspace from one processed foreground alpha plane. */
 export function createWorkspaceMaskSurfaces(
   pixels: Uint8ClampedArray,
   width: number,
@@ -206,9 +188,6 @@ export function createWorkspaceMaskSurfaces(
     foregroundImage.data[sourceOffset + 3] = 255
   }
   foregroundContext.putImageData(foregroundImage, 0, 0)
-  // Reuse the same CPU-side ImageData for the inverse coverage. The foreground canvas already
-  // owns its uploaded pixels, so keeping a second native-size ImageData alive only increases the
-  // peak during a mask-effects update.
   for (let index = 0; index < width * height; index += 1) {
     const offset = index * 4
     const foregroundAlpha = pixels[offset + 3] ?? 0

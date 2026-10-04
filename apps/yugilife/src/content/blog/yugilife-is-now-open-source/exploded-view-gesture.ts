@@ -2,8 +2,8 @@ import { clampZoom, offsetForPreviewZoom } from "@/lib/preview-viewport"
 
 import type { PreviewPoint } from "@/lib/preview-viewport"
 
-export const EXPLODED_VIEW_MIN_ZOOM = 0.55
-export const EXPLODED_VIEW_MAX_ZOOM = 1.8
+const EXPLODED_VIEW_MIN_ZOOM = 0.55
+const EXPLODED_VIEW_MAX_ZOOM = 1.8
 
 export function clampExplodedViewZoom(value: number) {
   return clampZoom(value, EXPLODED_VIEW_MIN_ZOOM, EXPLODED_VIEW_MAX_ZOOM)
@@ -19,7 +19,6 @@ interface ExplodedViewPinchTransform {
   midpoint: PreviewPoint
 }
 
-/** Keeps the initial focal point stable while applying pinch scale and midpoint movement. */
 export function explodedViewPinchTransform({
   center,
   distance,

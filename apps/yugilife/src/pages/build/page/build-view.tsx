@@ -7,6 +7,7 @@ import { AppNavigation } from "@/components/app-navigation"
 import { Button } from "@/components/ui/button"
 import { TabsSubtle, TabsSubtleItem, TabsSubtlePanel } from "@/components/ui/tabs-subtle"
 import { useShape } from "@/lib/shape-context"
+import { errorMessage } from "@/lib/utils"
 import { createZipBlob } from "@/lib/zip"
 
 import { EditorSidebar } from "../editor/components/editor-sidebar"
@@ -18,9 +19,9 @@ import { BuildGuide } from "./build-guide"
 import { focusPrimaryCardFieldControl } from "./card-field-focus"
 import { CardPreview } from "./card-preview"
 import { ExportToolbar } from "./export-toolbar"
-import { editorTemplateCatalog } from "./use-build-controller"
+import { editorTemplateCatalog } from "./use-template-activation"
 
-import type { ArtworkEditorTool } from "../editor/components/artwork-editor"
+import type { ArtworkEditorTool } from "../editor/components/artwork-mask-workspace"
 import type { useBuildController } from "./use-build-controller"
 import type { CardRenderMetadata } from "@/components/card"
 import type { RenderManifest } from "yugilife-core"
@@ -124,7 +125,7 @@ export function BuildView({ controller }: BuildViewProps) {
       .catch((error: unknown) => {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           setExactAnalysisFailure(metadata)
-          setAlphaExportError(error instanceof Error ? error.message : String(error))
+          setAlphaExportError(errorMessage(error))
         }
       })
   }
@@ -132,8 +133,6 @@ export function BuildView({ controller }: BuildViewProps) {
   const acceptRenderMetadata = useCallback((metadata: CardRenderMetadata | undefined) => {
     renderMetadata.current = metadata
     if (metadata || !showExactBoundsRef.current) return
-    // Exact bounds describe one immutable rendered snapshot. Never carry them into an edit or
-    // make normal rendering launch another alpha-analysis replay.
     showExactBoundsRef.current = false
     setShowExactBounds(false)
     setExactAnalysis(undefined)
@@ -215,7 +214,7 @@ export function BuildView({ controller }: BuildViewProps) {
       link.remove()
       URL.revokeObjectURL(url)
     } catch (error) {
-      setAlphaExportError(error instanceof Error ? error.message : String(error))
+      setAlphaExportError(errorMessage(error))
     } finally {
       setAlphaExportBusy(false)
     }

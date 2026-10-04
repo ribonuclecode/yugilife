@@ -4,7 +4,6 @@ import type {
   CardTemplate,
   CardTemplateBundle,
   ColorPresetCollection,
-  LayerDefinition,
 } from "../src"
 
 export const NAME_FIELD: CardFieldDefinition = {
@@ -27,10 +26,6 @@ export function testTemplate(overrides: Partial<CardTemplate> = {}): CardTemplat
     layers: [],
     ...overrides,
   }
-}
-
-export function testTemplateWithLayers(layers: readonly LayerDefinition[]): CardTemplate {
-  return testTemplate({ layers })
 }
 
 export function testTemplateBundle(

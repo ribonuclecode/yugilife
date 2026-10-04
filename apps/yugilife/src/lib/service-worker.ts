@@ -1,32 +1,30 @@
-/** How often an open page asks whether a newer version has been deployed. */
 const updateCheckMs = 30 * 60 * 1000
-/** A failed chunk load reloads the page at most once in this window, so offline cannot loop. */
 const reloadGuardMs = 10_000
 const reloadKey = "yugilife-chunk-reload"
 
-/**
- * Makes the production app installable and keeps it on the latest deploy.
- *
- * The worker itself (scripts/service-worker.js) always fetches pages from the network, so every
- * load runs the newest version. What is left is a tab that stays open across a deploy: it checks
- * for a new worker whenever it comes back into view and every half hour, and if it then asks for a
- * code chunk that the new deploy no longer has, it reloads onto the new version instead of failing.
- */
+async function isRedeployed() {
+  const entry = document.querySelector<HTMLScriptElement>("script[type=module][src]")
+  if (!entry) return false
+  const response = await fetch(import.meta.env.BASE_URL, { cache: "no-store" })
+  return response.ok && !(await response.text()).includes(new URL(entry.src).pathname)
+}
+
+async function reloadIfRedeployed() {
+  try {
+    if (!(await isRedeployed())) return
+    const last = Number(sessionStorage.getItem(reloadKey) ?? 0)
+    if (Date.now() - last < reloadGuardMs) return
+    sessionStorage.setItem(reloadKey, String(Date.now()))
+  } catch {
+    return
+  }
+  window.location.reload()
+}
+
 export function registerServiceWorker() {
   if (!import.meta.env.PROD) return
 
-  window.addEventListener("vite:preloadError", (event) => {
-    if (!navigator.onLine) return
-    try {
-      const last = Number(sessionStorage.getItem(reloadKey) ?? 0)
-      if (Date.now() - last < reloadGuardMs) return
-      sessionStorage.setItem(reloadKey, String(Date.now()))
-    } catch {
-      return
-    }
-    event.preventDefault()
-    window.location.reload()
-  })
+  window.addEventListener("vite:preloadError", () => void reloadIfRedeployed())
 
   if (!("serviceWorker" in navigator)) return
   window.addEventListener("load", () => {

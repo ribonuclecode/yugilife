@@ -1,8 +1,11 @@
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-import { parseRichText, plainTextFromRichText, renderCard } from "yugilife-core"
-
-import { createTextLayerFieldResolver } from "@/lib/card-text-fields"
+import {
+  createLayerSourceFieldResolver,
+  parseRichText,
+  plainTextFromRichText,
+  renderCard,
+} from "yugilife-core"
 
 import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react"
 import type {
@@ -35,10 +38,6 @@ export type CardProps = Omit<ComponentPropsWithoutRef<"div">, "children" | "onEr
     onError?: (error: Error) => void
     onRenderMetadata?: (metadata: CardRenderMetadata | undefined) => void
     onReady?: () => void
-    /**
-     * Explicit invalidation for mutable external inputs. Immutable card, template, asset, renderer,
-     * layer, and preset inputs are otherwise compared by reference.
-     */
     renderRevision?: number | string
   }
 
@@ -50,14 +49,6 @@ const overlayStyle: CSSProperties = {
   width: "100%",
 }
 
-/**
- * Presentation attributes React knows under a camelCase spelling.
- *
- * The renderer emits the SVG spelling, which is what serialization and export need. React warns on
- * every attribute in its own table that arrives hyphenated, so anything the template schema allows
- * and React recognizes has to be translated on the way into JSX. `white-space` is deliberately
- * absent: React has no entry for it, so it reaches the DOM untouched and correct.
- */
 const reactSvgAttributeNames: Readonly<Record<string, string>> = {
   "baseline-shift": "baselineShift",
   "dominant-baseline": "dominantBaseline",
@@ -179,10 +170,6 @@ function RasterSegment({
   )
 }
 
-/**
- * Latest-value ref for inputs that must not themselves trigger a render, such as an unmemoized
- * `onReady`/`onError` callback. Synced in an effect so nothing is written during render.
- */
 function useLatest<T>(value: T) {
   const ref = useRef(value)
   useEffect(() => {
@@ -305,7 +292,6 @@ export function Card({
       console.groupEnd()
     }
 
-    // Reading the revision makes explicit that it is an invalidation token, not renderer data.
     void renderRevision
     void renderCard(card, options)
       .then(async (rendered) => {
@@ -330,7 +316,7 @@ export function Card({
           createRenderManifest: () => rendered.createRenderManifest(),
           textFields: () => {
             if (textFields) return textFields
-            const fieldsForLayer = createTextLayerFieldResolver(
+            const fieldsForLayer = createLayerSourceFieldResolver(
               templateBundle.template,
               rendered.presentation,
             )
@@ -377,8 +363,6 @@ export function Card({
           })
         }
         if (!active || controller.signal.aborted) {
-          // An aborted render is a superseded render, not a failure. Clear any stale error so the
-          // component does not keep showing a message for a render nobody is waiting on.
           if (active) setError(undefined)
           return
         }

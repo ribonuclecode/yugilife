@@ -23,7 +23,6 @@ interface QueuedRefinement {
   resolve: (frame: { mask: Uint8Array; blob?: Blob }) => void
 }
 
-/** Identifies work superseded by a newer refinement request rather than a worker failure. */
 export class QuickSelectionWorkerAbortError extends Error {
   constructor(message = "Pin mask work was superseded.") {
     super(message)
@@ -37,13 +36,6 @@ export function isQuickSelectionWorkerAbortError(
   return reason instanceof QuickSelectionWorkerAbortError
 }
 
-/**
- * Main-thread client for the pin-mask worker.
- *
- * The client owns lifecycle, request correlation, and latest-only refinement scheduling. It never
- * exposes the mutable WASM engine to React. A prepared pixel buffer is consumed by `prepare` and
- * transferred to the worker; callers must not use that typed array after the call.
- */
 export class QuickSelectionWorkerClient {
   #disposed = false
   #failure: Error | undefined
@@ -71,7 +63,6 @@ export class QuickSelectionWorkerClient {
     })
   }
 
-  /** Consumes a cloned artwork bitmap; native pixel readback happens inside the worker. */
   prepareBitmap(bitmap: ImageBitmap) {
     if (this.#failure || this.#disposed) {
       bitmap.close()
@@ -90,8 +81,6 @@ export class QuickSelectionWorkerClient {
     if (this.#failure) return Promise.reject(this.#failure)
     if (this.#disposed)
       return Promise.reject(new QuickSelectionWorkerAbortError("Pin mask worker was closed."))
-    // ImageData normally has an exact, zero-offset buffer. Normalize other views before transfer
-    // so the worker receives precisely width × height × 4 bytes rather than an enclosing buffer.
     const transferable =
       rgba.byteOffset === 0 && rgba.byteLength === rgba.buffer.byteLength ? rgba : rgba.slice()
     const buffer = transferable.buffer
@@ -110,12 +99,10 @@ export class QuickSelectionWorkerClient {
     })
   }
 
-  /** Queues only the newest point set while an older refinement is running in the worker. */
   refine(points: readonly PinMaskPoint[]) {
     return this.#refine(points, false).then(({ mask }) => mask)
   }
 
-  /** Publishes pixels and their persisted PNG together, with encoding performed in the worker. */
   refineEncoded(points: readonly PinMaskPoint[]) {
     return this.#refine(points, true).then(({ mask, blob }) => {
       if (!blob) throw new Error("The pin mask worker did not return an encoded mask.")

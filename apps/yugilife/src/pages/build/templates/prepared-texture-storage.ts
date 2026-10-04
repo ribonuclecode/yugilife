@@ -1,19 +1,10 @@
-import {
-  openTemplateDatabase,
-  preparedTextureStore,
-  requestResult,
-  transactionComplete,
-} from "./template-database"
+import { requestResult, transactionComplete } from "@/lib/indexed-db"
+import { isRecord } from "@/lib/utils"
+
+import { openTemplateDatabase, preparedTextureStore } from "./template-database"
 
 import type { PreparedTexturePayload, TemplateId } from "yugilife-core"
 
-/**
- * Prepared textures for one exact template release.
- *
- * Keyed by stable template ID alone, like the bundle cache: a template has one current release, and
- * keeping textures for a release nothing can select would retain megabytes no render will ever read.
- * The version is stored so a stale record is recognized rather than drawn.
- */
 export interface StoredPreparedTextureRecord {
   id: TemplateId
   payloads: readonly PreparedTexturePayload[]
@@ -23,10 +14,6 @@ export interface StoredPreparedTextureRecord {
 }
 
 const memoryRecords = new Map<TemplateId, StoredPreparedTextureRecord>()
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
 
 function isPayload(value: unknown): value is PreparedTexturePayload {
   if (!isRecord(value)) return false
@@ -59,12 +46,6 @@ export function preparedTextureSize(payloads: readonly PreparedTexturePayload[])
   return payloads.reduce((total, { alpha, color }) => total + color.size + (alpha?.size ?? 0), 0)
 }
 
-/**
- * Prepared textures for this exact release, or undefined when none are stored for it.
- *
- * Every failure resolves to undefined rather than rejecting: a missing, unreadable or stale cache
- * only means this session grades its own textures, which is what an unprepared render already does.
- */
 export async function readPreparedTextures(id: TemplateId, version: string) {
   const fromMemory = memoryRecords.get(id)
   if (fromMemory) return fromMemory.version === version ? fromMemory.payloads : undefined
@@ -87,10 +68,6 @@ export async function readPreparedTextures(id: TemplateId, version: string) {
   }
 }
 
-/**
- * Replaces the stored textures for one template. Storage failure is reported to the caller but is
- * never fatal: the textures it could not persist are already prepared for this session.
- */
 export async function storePreparedTextures(
   id: TemplateId,
   version: string,
@@ -132,7 +109,6 @@ export async function deletePreparedTextures(id: TemplateId) {
   }
 }
 
-/** Bytes of prepared textures held for every template, for the cache total the manager reports. */
 export async function preparedTextureCacheBytes() {
   try {
     const database = await openTemplateDatabase()

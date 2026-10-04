@@ -11,10 +11,6 @@ import { readStoredTemplate } from "../../build/templates/template-storage"
 import type { EditorDocumentState } from "../../build/editor/model/editor-document"
 import type { InventoryCard } from "./inventory-card"
 
-/**
- * Migrates a saved card to the currently supported template before it enters the editor. Template
- * migrations are deliberately separate from inventory-record migrations and ordinary transitions.
- */
 export function migrateInventoryCardDocument(
   document: EditorDocumentState,
   current: EditorDocumentState,

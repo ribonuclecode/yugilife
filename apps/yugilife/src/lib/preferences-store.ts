@@ -1,8 +1,9 @@
 import { create } from "zustand"
 
+import { isRecord } from "@/lib/utils"
+
 export type Theme = "system" | "light" | "dark"
 
-/** `native` hands the pointer back to the OS; `custom` draws the app's own cursor. */
 export type CursorPreference = "custom" | "native"
 
 export const DEFAULT_ACCENT_COLOR = "#FF8A65"
@@ -39,10 +40,6 @@ function isCssColor(value: string) {
   return CSS.supports("color", value)
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
-}
-
 function validAccentColor(value: unknown, fallback: string) {
   return typeof value === "string" && isCssColor(value) ? value : fallback
 }
@@ -70,7 +67,6 @@ function readPreferences(): PersistedPreferences {
       }
     }
 
-    // Migrate the two keys used before the Zustand store existed.
     const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
     const storedAccentColor = window.localStorage.getItem(ACCENT_COLOR_STORAGE_KEY)
 

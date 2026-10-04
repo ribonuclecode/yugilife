@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { deriveCardSemantics, resolveCardPresentation } from "../src"
-import { layerSourceFields } from "../src/rendering/layer-source-fields"
+import { createLayerSourceFieldResolver } from "../src/rendering/layer-source-fields"
 
 import { NAME_FIELD, testTemplate } from "./fixtures"
 
@@ -47,6 +47,6 @@ describe("rendered layer source fields", () => {
     const semantics = deriveCardSemantics(card, template)
     const presentation = resolveCardPresentation(template, semantics)
 
-    expect(layerSourceFields(template, statusLayer, presentation)).toEqual(["status"])
+    expect(createLayerSourceFieldResolver(template, presentation)(statusLayer)).toEqual(["status"])
   })
 })

@@ -1,4 +1,4 @@
-import { throwIfAborted } from "./rendering/assets.js"
+import { abortReason, throwIfAborted } from "./rendering/async-resources.js"
 
 import type {
   CardDimensions,
@@ -106,12 +106,6 @@ function rasterOptions(options?: RasterExportOptions) {
     mimeType: mimeTypes[format],
     quality: format === "png" ? undefined : (quality ?? defaultLossyQuality),
   }
-}
-
-function abortReason(signal?: AbortSignal) {
-  return signal?.reason instanceof Error
-    ? signal.reason
-    : new DOMException("Rendering was aborted.", "AbortError")
 }
 
 function loadSvg(svg: string, signal?: AbortSignal) {

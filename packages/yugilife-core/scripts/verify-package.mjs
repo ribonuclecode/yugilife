@@ -1,22 +1,12 @@
-import { access, readdir, readFile } from "node:fs/promises"
+import { access, readFile } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+
+import { listFiles } from "../../../scripts/list-files.mjs"
 
 const packageDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 
 const distributionDirectory = path.join(packageDirectory, "dist")
-
-async function walk(directory) {
-  const entries = await readdir(directory, { withFileTypes: true })
-  return (
-    await Promise.all(
-      entries.map(async (entry) => {
-        const resolved = path.join(directory, entry.name)
-        return entry.isDirectory() ? walk(resolved) : [resolved]
-      }),
-    )
-  ).flat()
-}
 
 await Promise.all([
   access(path.join(distributionDirectory, "index.js")),
@@ -28,7 +18,7 @@ await Promise.all([
   access(path.join(distributionDirectory, "public/color-grading.d.ts")),
 ])
 
-const files = await walk(distributionDirectory)
+const files = await listFiles(distributionDirectory)
 if (files.some((file) => file.endsWith(".map"))) {
   throw new Error("Core distribution contains forbidden source-map files.")
 }

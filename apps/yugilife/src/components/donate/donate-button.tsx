@@ -16,20 +16,7 @@ import type { Fog } from "./fog"
 import type { HeartSprite } from "./heart-sprite"
 import type { Arrival, ScreenParts } from "./screen-transitions"
 
-/**
- * Support button → the screen behind it.
- *
- * The heart is not an ornament. Pressing Donate makes it real: it swells to its native size, the
- * weight takes it straight down, and it breaks on the floor of the page. The light of that break
- * floods the screen, and the donation scene is what is left when the light drains away. Coming
- * back is a different move again — see `closeSheet`.
- *
- * The screen is an overlay rather than a route on purpose: most people press this from the
- * builder, and a route change would throw away the card they are working on.
- */
 export function DonateButton() {
-  // The pill sits on the navbar's own control ladder, and grows its label at the same width the
-  // nav items grow theirs. Only its colour is its own.
   const sizeClasses = useSize()
   const buttonRef = useRef<HTMLButtonElement>(null)
   const slotRef = useRef<HTMLSpanElement>(null)
@@ -43,17 +30,13 @@ export function DonateButton() {
   const spriteRef = useRef<HeartSprite | null>(null)
   const fogRef = useRef<Fog | null>(null)
   const arrivalRef = useRef<Arrival | null>(null)
-  // one transition at a time; the pointer and focus flags only matter to the heart, not to React
   const busy = useRef(false)
-  // a close asked for mid-arrival is honoured once the sheet has arrived, not dropped
   const closeRequested = useRef(false)
   const pointerInside = useRef(false)
   const focused = useRef(false)
 
   const [open, setOpen] = useState(false)
-  // the screen is shown only between the heart's break and the band's sweep
   const [screenShown, setScreenShown] = useState(false)
-  // the no-WebGL stand-in, shown only once the 3D heart is known to be unavailable
   const [flatHeart, setFlatHeart] = useState(false)
 
   const isActive = () => (pointerInside.current || focused.current) && !busy.current
@@ -105,16 +88,13 @@ export function DonateButton() {
     return { band, fogCanvas, glow, screen, sheet }
   }
 
-  /** Button → donation sheet, out of the break. */
   const openSheet = async () => {
     if (busy.current) return
     busy.current = true
     closeRequested.current = false
     syncActive()
-    // the sheet is mounted now, hidden inside the screen, so its content exists to be arrived at
     flushSync(() => setOpen(true))
 
-    // the heart falls and breaks; it tells us where
     const sprite = spriteRef.current
     const [x, y] = sprite
       ? await sprite.breakOnFloor()
@@ -126,7 +106,7 @@ export function DonateButton() {
       return
     }
     flushSync(() => setScreenShown(true))
-    fogRef.current?.start() // sized and painted before it is faded up
+    fogRef.current?.start()
     const arrival = arrive(screenParts, x, y)
     arrivalRef.current = arrival
     await arrival.ready
@@ -138,11 +118,6 @@ export function DonateButton() {
     if (closeRequested.current) void closeSheet()
   }
 
-  /**
-   * Leaving is a different move, not the arrival rewound. The sheet sinks, a crimson band sweeps
-   * down over it and keeps going off the bottom, uncovering the page — and a new heart falls in
-   * from above behind it.
-   */
   const closeSheet = async () => {
     if (busy.current) {
       closeRequested.current = true
@@ -156,19 +131,14 @@ export function DonateButton() {
     }
     busy.current = true
 
-    // 1. the sheet sinks away while the band comes down over it
     await sink(screenParts)
 
-    // 2. swap underneath, while the crimson hides the cut
     setScreenShown(false)
     fogRef.current?.stop()
     arrivalRef.current?.cancel()
     arrivalRef.current = null
     setOpen(false)
 
-    // 3. the band carries on out of the bottom and the new heart falls in behind it. dropIn parks
-    // the heart above the page before it is made visible again, otherwise it shows for a frame
-    // sitting in the button, over the band.
     const sprite = spriteRef.current
     const falling = sprite ? sprite.dropIn() : Promise.resolve()
     sprite?.setVisible(true)
@@ -218,7 +188,6 @@ export function DonateButton() {
           syncActive()
         }}
         onFocus={(event) => {
-          // a mouse click shouldn't leave it lit
           focused.current = event.currentTarget.matches(":focus-visible")
           syncActive()
         }}
@@ -228,7 +197,6 @@ export function DonateButton() {
           syncActive()
         }}
       >
-        {/* The heart's seat. The 3D heart is a fixed canvas that follows this box every frame. */}
         <span ref={slotRef} className="relative block size-[17px] shrink-0 lg:mr-1.5">
           {flatHeart ? (
             <svg
@@ -248,7 +216,6 @@ export function DonateButton() {
 
       {createPortal(
         <>
-          {/* Lit at all times because it sits on crimson; hovering only lifts it. */}
           {flatHeart ? null : (
             <canvas
               ref={canvasRef}
@@ -260,8 +227,6 @@ export function DonateButton() {
               )}
             />
           )}
-          {/* The light of the break. Its last stop is fully transparent, so it has no edge: it
-              floods the screen from the point of impact without cutting it. */}
           <div
             ref={glowRef}
             aria-hidden="true"
@@ -270,11 +235,6 @@ export function DonateButton() {
               "bg-[radial-gradient(circle_var(--glow,0px)_at_var(--gx,50%)_var(--gy,100%),#ffffff_0%,#ffffff_46%,rgba(255,255,255,0.8)_66%,rgba(255,255,255,0)_100%)]",
             )}
           />
-          {/* The way out is its own move: this bows down over the plea, covers it, and keeps going
-              off the bottom, uncovering the page behind it. The same swept curve the page
-              transition uses, entered from the top instead of the bottom — a unit viewBox with no
-              aspect ratio preserved, so one path describes it at any window size. It draws nothing
-              until sink() gives it a shape. */}
           <svg
             aria-hidden="true"
             className="pointer-events-none fixed inset-0 z-[61] h-[100dvh] w-[100vw]"
@@ -292,28 +252,16 @@ export function DonateButton() {
           >
             <section
               ref={screenRef}
-              // The screen is white and pink in either theme, so the cursor takes dark ink here.
               data-cursor-surface="light"
               hidden={!screenShown}
               className={cn(
                 "fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto px-5 py-10",
-                // The gutter is reserved on both edges from the start. Opening the codes makes
-                // this screen taller than the viewport, and without this its scrollbar appears at
-                // that moment and shoves the centred column sideways — a shift the reveal itself
-                // has nothing to do with. Both edges, so the column stays centred either way.
                 "[scrollbar-gutter:stable_both-edges]",
-                // The white is only what shows before the fog paints its first frame.
                 "bg-white",
-                // Needed because display:flex otherwise beats the user agent's rule for [hidden].
                 "[&[hidden]]:hidden",
-                // The modal dialog turns pointer events off on the body and back on only for its
-                // content. This screen is its backdrop, so it takes them back too: otherwise
-                // anything off the sheet, the cursor's ink included, sees the page behind it.
                 "pointer-events-auto",
               )}
             >
-              {/* Fixed, not absolute: the screen scrolls, and the fog is the sky behind it rather
-                  than part of the page that moves with it. */}
               <canvas
                 ref={fogCanvasRef}
                 aria-hidden="true"

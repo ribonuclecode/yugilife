@@ -12,7 +12,8 @@ import { TabsSubtle, TabsSubtleItem } from "@/components/ui/tabs-subtle"
 import { useShape } from "@/lib/shape-context"
 import { cn } from "@/lib/utils"
 
-import type { ExportFormat, RasterSizeChoice, useBuildController } from "./use-build-controller"
+import type { useBuildController } from "./use-build-controller"
+import type { ExportFormat, RasterSizeChoice } from "./use-card-export"
 import type { ChangeEvent } from "react"
 
 interface ExportToolbarProps {

@@ -1,4 +1,5 @@
-import { loadDrawable, throwIfAborted } from "./rendering/assets.js"
+import { loadDrawable } from "./rendering/assets.js"
+import { throwIfAborted } from "./rendering/async-resources.js"
 import { flattenDrawableLayers, isRasterLayer } from "./rendering/layer-tree.js"
 import { MapAssetResolver } from "./asset-resolver.js"
 import { applyColorPreset } from "./color-grading.js"
@@ -13,13 +14,7 @@ import type {
   TexturePreparation,
 } from "./contracts/index.js"
 
-/**
- * Stable identity of one prepared texture, scoped to one exact template bundle.
- *
- * The preset is identified by name rather than by content because a published change to any part of
- * a template bundle mints a new template version, and a consumer that persists payloads keys them by
- * that exact identity. Naming keeps the lookup a string concatenation on the render path.
- */
+// Presets are keyed by name: any content change mints a new template version, which scopes the key.
 export function preparedTextureKey({ assetId, presetName, region }: TexturePreparation) {
   const area = region ? `${region.x},${region.y},${region.width},${region.height}` : "source"
   return `${assetId}\u0000${presetName}\u0000${area}`
@@ -33,15 +28,7 @@ function texturePreparation(
   return { assetId, presetName, ...(region ? { region } : {}) }
 }
 
-/**
- * Every texture a card of this template can resolve to, derived from the declared layers and
- * presentation rules alone.
- *
- * Explicit user preset overrides are deliberately outside this set: they may name any preset in the
- * collection for any layer, so covering them would multiply the work by the whole collection to
- * prepare textures most cards never show. Those keep grading live, which is what an unprepared
- * render already does.
- */
+// User preset overrides are excluded on purpose; they may name any preset and keep grading live.
 export function collectTexturePreparations(
   template: CardTemplate,
   colorPresets: ColorPresetCollection,
@@ -72,8 +59,6 @@ export function collectTexturePreparations(
 
     for (const assetId of assetIds) {
       for (const presetName of presetNames) {
-        // An identity preset performs no pixel work, and an unknown name is the renderer's error to
-        // report against the layer that asked for it.
         const method = colorPresets[presetName]?.method
         if (method === undefined || method === "identity") continue
         const preparation = texturePreparation(assetId, presetName, layer.sourceRegion)
@@ -109,10 +94,7 @@ function encodePlane(canvas: HTMLCanvasElement) {
   })
 }
 
-/**
- * Writes one opaque plane and encodes it losslessly. The alpha channel is forced opaque so the
- * encoder never has to represent premultiplied color, which is what makes the round trip exact.
- */
+// Opaque planes avoid premultiplication, which keeps the lossless round trip exact.
 async function encodeOpaquePlane(pixels: ImageData) {
   for (let index = 3; index < pixels.data.length; index += 4) pixels.data[index] = 255
   const { canvas, context } = createCanvas(pixels.width, pixels.height)
@@ -120,7 +102,6 @@ async function encodeOpaquePlane(pixels: ImageData) {
   return await encodePlane(canvas)
 }
 
-/** Source coverage replicated across the color channels, or undefined when nothing is transparent. */
 function coveragePlane(pixels: ImageData) {
   let transparent = false
   for (let index = 3; index < pixels.data.length; index += 4) {
@@ -179,12 +160,8 @@ async function gradeTexture(
     region.height,
   )
   const pixels = context.getImageData(0, 0, region.width, region.height)
-  // Taken before grading so the separation does not depend on grading leaving alpha alone, even
-  // though it does.
   const coverage = coveragePlane(pixels)
-  // The CPU evaluator, not the accelerated path: it is the byte-order reference implementation, so
-  // a persisted texture stays reproducible on a machine whose GPU path is unavailable or rounds a
-  // partially covered edge pixel differently.
+  // The CPU evaluator is the byte-exact reference, so persisted textures never depend on a GPU.
   applyColorPreset(pixels, preset)
 
   return {
@@ -197,28 +174,16 @@ async function gradeTexture(
 }
 
 export interface PrepareTemplateTexturesOptions {
-  /** Reports finished textures against the total, so a caller can show determinate progress. */
   readonly onProgress?: ((completed: number, total: number) => void) | undefined
   readonly signal?: AbortSignal | undefined
 }
 
 export interface PreparedTemplateTextures {
-  /** Stored as-is by a consumer that wants later sessions to skip the grading entirely. */
   readonly payloads: readonly PreparedTexturePayload[]
   readonly textures: PreparedTextures
 }
 
-/**
- * Grades every texture this template can resolve to, once.
- *
- * This is the whole cost of "color matching" paid up front, in exchange for never paying it on a
- * render again. It is deliberately not a cache: a consumer decides where the payloads live and how
- * long they survive, and core neither stores nor reloads them.
- *
- * The returned textures read back from those same payloads rather than from the canvases the
- * grading produced, so a freshly prepared template and one restored from storage draw pixels that
- * came through exactly one code path.
- */
+// Textures are decoded from the payloads, so fresh and restored textures share one code path.
 export async function prepareTemplateTextures(
   bundle: CardTemplateBundle,
   options: PrepareTemplateTexturesOptions = {},
@@ -238,9 +203,7 @@ export async function prepareTemplateTextures(
 async function decodePlane(blob: Blob, width: number, height: number) {
   const drawable =
     typeof createImageBitmap === "function"
-      ? // Keep the decoder's own color management out of it: the stored bytes are already the exact
-        // values the renderer must draw.
-        await createImageBitmap(blob, { colorSpaceConversion: "none", premultiplyAlpha: "none" })
+      ? await createImageBitmap(blob, { colorSpaceConversion: "none", premultiplyAlpha: "none" })
       : await loadDrawable(blob)
   try {
     const { context } = createCanvas(width, height, true)
@@ -251,13 +214,6 @@ async function decodePlane(blob: Blob, width: number, height: number) {
   }
 }
 
-/**
- * Rebuilds one texture from its stored planes.
- *
- * Recombining them through `putImageData` is what makes a restored texture identical to a live
- * graded one: both hand the canvas the same unpremultiplied pixels, so neither depends on how the
- * canvas happens to store premultiplied color.
- */
 async function decodePreparedTexture(payload: PreparedTexturePayload) {
   const pixels = await decodePlane(payload.color, payload.width, payload.height)
   if (payload.alpha) {
@@ -271,11 +227,7 @@ async function decodePreparedTexture(payload: PreparedTexturePayload) {
   return canvas
 }
 
-/**
- * Prepared textures backed by stored payloads, each decoded once and only when a render first draws
- * it. A payload that cannot be decoded resolves to undefined so that render grades it live instead
- * of failing on a damaged cache.
- */
+// Decodes lazily; an undecodable payload resolves to undefined so the render grades it live.
 export function decodePreparedTextures(
   payloads: readonly PreparedTexturePayload[],
 ): PreparedTextures {

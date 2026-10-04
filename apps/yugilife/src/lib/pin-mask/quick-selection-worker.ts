@@ -9,9 +9,6 @@ import type {
 let engine: QuickSelection | undefined
 
 function respond(response: QuickSelectionWorkerResponse, transfer: Transferable[] = []) {
-  // DOM's global type describes the Window overload here; the worker runtime also supports the
-  // long-standing transfer-list overload, so keep the boundary explicit without adding WebWorker
-  // libs to the application's main-thread TypeScript program.
   const workerGlobal = globalThis as unknown as {
     postMessage(message: QuickSelectionWorkerResponse, transfer?: Transferable[]): void
   }
@@ -25,8 +22,6 @@ function errorMessage(reason: unknown) {
 async function handle(request: QuickSelectionWorkerRequest) {
   try {
     if (request.type === "prepare" || request.type === "prepare-bitmap") {
-      // The image buffer is transferred into this worker and is never retained after prepare.
-      // QuickSelection owns the long-lived WASM copy and the mutable prepared-image state.
       engine = undefined
       if (request.type === "prepare-bitmap") {
         const bitmap = request.bitmap
@@ -68,8 +63,7 @@ async function handle(request: QuickSelectionWorkerRequest) {
   }
 }
 
-// Worker message events can arrive while an async WASM module load is awaiting. Serialising the
-// handlers protects the single mutable WASM heap and makes prepare/refine ordering explicit.
+// Serialized so the single mutable WASM heap sees prepare/refine in order.
 let queue = Promise.resolve()
 globalThis.addEventListener("message", (event: MessageEvent<QuickSelectionWorkerRequest>) => {
   queue = queue.then(() => handle(event.data)).catch(() => undefined)

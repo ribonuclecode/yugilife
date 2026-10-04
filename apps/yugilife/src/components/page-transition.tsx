@@ -83,7 +83,6 @@ export function PageTransition({ children }: { children: (location: Location) =>
   const cancelRef = useRef<(() => void) | null>(null)
   const readyWaitCancelRef = useRef<(() => void) | null>(null)
   const routeReadyRef = useRef(true)
-  /** The newest place asked for. A sweep in flight reads this at its next decision point. */
   const pendingRef = useRef<{ location: Location; navigationType: NavigationType } | null>(null)
   const runningRef = useRef(false)
   const scrollPositionsRef = useRef(new Map<string, { left: number; top: number }>())
@@ -109,9 +108,6 @@ export function PageTransition({ children }: { children: (location: Location) =>
 
       const check = () => {
         if (cancelled) return
-        // A newer destination ends the wait as surely as readiness does: the route being waited on
-        // may be the one that asked for it, as a redirect that never reports ready, and it is
-        // about to be replaced either way.
         if (routeReadyRef.current || pendingRef.current) {
           if (readyWaitCancelRef.current === cancel) readyWaitCancelRef.current = null
           resolve(true)
@@ -120,8 +116,6 @@ export function PageTransition({ children }: { children: (location: Location) =>
         frameId = window.requestAnimationFrame(check)
       }
 
-      // Give the newly displayed route a commit/effect cycle to register its
-      // loading state before deciding whether the reveal can continue.
       frameId = window.requestAnimationFrame(() => {
         frameId = window.requestAnimationFrame(check)
       })
@@ -139,9 +133,6 @@ export function PageTransition({ children }: { children: (location: Location) =>
     }
   }, [])
 
-  // The only thing that ever cancels a sweep is the component going away. Cancelling for a new
-  // navigation is what broke this: it tore the sweep down mid-curve and the run that replaced it
-  // began by snapping the path back to empty, which is the jump a double click produced.
   useLayoutEffect(
     () => () => {
       cancelRef.current?.()
@@ -153,24 +144,12 @@ export function PageTransition({ children }: { children: (location: Location) =>
     [],
   )
 
-  /**
-   * One sweep at a time, and never interrupted.
-   *
-   * A navigation does not start an animation — it names a destination. The loop below reads that
-   * destination at the two points where it can act on one: when the screen is covered, and once
-   * it is open again. So a second click on the same link changes nothing, a click on a different
-   * link mid-sweep simply changes where this sweep is going, and neither can leave the path
-   * half-drawn. Resuming an interrupted curve, and knowing which of the two shape families it
-   * belonged to, stops being a problem that has to be solved at all.
-   */
   const sweep = useCallback(async () => {
     const path = pathRef.current
     if (!path || runningRef.current) return
     runningRef.current = true
     setIsAnimating(true)
 
-    // Whether the screen is currently fully covered. A destination that arrives while it is gets
-    // displayed straight away; only one that arrives while it is open has to be covered first.
     let covered = false
     try {
       while (pendingRef.current) {
@@ -202,7 +181,6 @@ export function PageTransition({ children }: { children: (location: Location) =>
           covered = true
         }
 
-        // Covered: whatever was asked for most recently is where we are going.
         const { location: next, navigationType: type } = pendingRef.current
         pendingRef.current = null
         displayLocationRef.current = next
@@ -212,8 +190,6 @@ export function PageTransition({ children }: { children: (location: Location) =>
         const ready = await waitForRouteReady()
         if (!ready) return
 
-        // Asked somewhere else while the route was settling: stay covered and go round again,
-        // rather than opening onto a page we are about to leave.
         if (pendingRef.current) continue
 
         if (type === NavigationType.Pop) {
@@ -255,8 +231,6 @@ export function PageTransition({ children }: { children: (location: Location) =>
           cancelRef,
         )
         if (!complete) return
-        // Anything asked for during the exit sweeps again from here, off a screen that is fully
-        // open — never off a half-drawn one.
       }
     } finally {
       runningRef.current = false

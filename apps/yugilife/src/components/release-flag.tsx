@@ -5,11 +5,6 @@ import type { Transition } from "framer-motion"
 type ReleaseFlagProps = {
   label?: string
   className?: string
-  /**
-   * `inline` sits in a line of caption text; `display` is the same flag at headline scale, for a
-   * surface where it is the first thing read. The whole drawing is in `em`, so only the type size
-   * changes between them.
-   */
   size?: "display" | "inline"
 }
 
@@ -32,8 +27,6 @@ function formatNumber(value: number) {
   return Number(value.toFixed(2))
 }
 
-// The hoist at x=0 never moves. The wave grows continuously toward the free
-// edge, with enough spatial phase to read as traveling cloth rather than scale.
 function getWaveOffset(x: number, phase: number) {
   const distanceFromHoist = x / flagWidth
   const amplitude = 3.6 * distanceFromHoist ** 1.15
@@ -128,9 +121,6 @@ export function ReleaseFlag({ label = "RELEASE", className, size = "inline" }: R
       xmlns="http://www.w3.org/2000/svg"
     >
       <title>{flagLabel}</title>
-      {/* The wave starts from its own first frame, which is the resting flag. `initial={false}`
-          would instead jump straight to the last keyframe and treat the loop as already done: it
-          only appeared to work in development, where StrictMode's second mount restarted it. */}
       <motion.path
         animate={{ d: prefersReducedMotion ? restingFlag : flagFrames }}
         d={restingFlag}
@@ -144,7 +134,6 @@ export function ReleaseFlag({ label = "RELEASE", className, size = "inline" }: R
 
         return (
           <motion.g
-            // The position is stable even when the same letter occurs more than once.
             key={index}
             animate={{
               scaleX: prefersReducedMotion ? 1 : projections.map(({ scaleX }) => scaleX),

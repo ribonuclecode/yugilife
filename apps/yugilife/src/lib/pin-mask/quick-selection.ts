@@ -5,7 +5,6 @@ export type { PinMaskPoint } from "./quick-selection-types"
 const maximumPresetDimension = 65_535
 const maximumPresetPoints = 100_000
 
-/** Decodes the compact PMB2 preset emitted by the local pymasker pipeline. */
 export function decodePinMaskPreset(source: Uint8Array): readonly PinMaskPoint[] {
   let offset = 0
   const readByte = () => {
@@ -110,4 +109,3 @@ export function decodePinMaskPreset(source: Uint8Array): readonly PinMaskPoint[]
 }
 
 // Internal tooling compatibility; production UI uses the worker client.
-export { QuickSelection } from "./quick-selection-engine"

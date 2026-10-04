@@ -48,7 +48,6 @@ function optionLabel(option: string) {
   return option.replaceAll("-", " ").replace(/\b\w/g, (character) => character.toUpperCase())
 }
 
-/** Whether an option is the field's own way of saying "not set". */
 function isNeutralOption(option: string) {
   return option.toLocaleLowerCase() === "none"
 }
@@ -305,9 +304,6 @@ export const CardFieldInput = memo(function CardFieldInput({
   }
 
   if (field.options) {
-    // An optional field normally gets a synthetic row for clearing it. A field that declares its own
-    // neutral member already offers that choice, and rendering both leaves two "None" entries in the
-    // menu that do the same thing.
     const clearable = !field.required && !field.options.some(isNeutralOption)
     return (
       <Field>

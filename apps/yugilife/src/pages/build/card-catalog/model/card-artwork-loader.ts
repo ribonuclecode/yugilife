@@ -7,21 +7,10 @@ import type { DecodedYlm } from "@/lib/ylm"
 const artworkOrigin = "https://yugilife-artworks.alixsep.workers.dev/"
 const maximumArtworkBytes = 16 * 1024 * 1024
 const downloadTimeoutMs = 120_000
-/**
- * Progress is rate-limited by wall clock rather than by transferred bytes. A byte step ties the
- * report rate to connection speed — the same one-percent step that is calm on a slow link fires
- * dozens of times a second on a fast one — whereas a fixed interval bounds the repaint rate on
- * every connection. Both the aggregate and each individual transfer are limited, so adding
- * artworks to a batch cannot multiply the rate.
- *
- * The first and last reports of each file, and every bundle completion, bypass the limit: the bar
- * still starts at zero, lands on the true final byte count, and never stalls short of a boundary.
- */
 const progressIntervalMs = 250
-/** Each artwork is two separately hosted files: its image bundle and its alpha bundle. */
 const bundlesPerArtwork = 2
 
-export type CardArtworkLoadProgress =
+type CardArtworkLoadProgress =
   { loadedBytes: number; phase: "downloading"; totalBytes?: number } | { phase: "verifying" }
 
 export interface CardArtworkIdentity {
@@ -36,21 +25,9 @@ interface CardArtworkLoadOptions {
   signal?: AbortSignal
 }
 
-/**
- * Aggregate progress across every bundle of every requested artwork.
- *
- * The denominator is bundles, not bytes. An artwork's alpha bundle is a second request whose size
- * is unknown until its own response headers arrive, and the worker may serve either bundle without
- * a usable `content-length` at all, so a byte denominator would grow mid-download and slide the bar
- * backwards. The bundle count is known before the first request, which is what keeps `ratio`
- * monotonic from the first frame to the last.
- */
 export interface CardArtworksLoadProgress {
-  /** Bytes received across every bundle so far. Informational, and never decreases. */
   loadedBytes: number
-  /** Overall completion in [0, 1]: settled bundles plus the transferred fraction of live ones. */
   ratio: number
-  /** True while every started bundle is being authenticated and decoded rather than transferred. */
   verifying: boolean
 }
 
@@ -77,7 +54,7 @@ export interface LoadedCardArtwork {
   maskPoints?: readonly PinMaskPoint[] | undefined
 }
 
-export class ArtworkNotFoundError extends Error {
+class ArtworkNotFoundError extends Error {
   readonly artworkId: number
 
   constructor(artworkId: number) {
@@ -148,8 +125,6 @@ async function responseBytes(
     })
   }
 
-  // Published before the first chunk so the bar starts empty against a known denominator rather
-  // than appearing already part-filled at whatever the first chunk happened to carry.
   report(true)
   while (true) {
     const { done, value } = await reader.read()
@@ -273,7 +248,6 @@ export async function loadCardArtwork(
   return new Blob([rgb.slice().buffer], { type: "image/avif" })
 }
 
-/** Mask-only recovery does not redownload or require the separately hosted RGB bundle. */
 export async function loadCardArtworkAlpha(
   expected: CardArtworkIdentity,
   options: CardArtworkLoadOptions = {},
@@ -290,14 +264,6 @@ export async function loadCardArtworkAlpha(
   }
 }
 
-/**
- * Folds the per-bundle reports of a batch into one monotonic aggregate.
- *
- * A bundle is *live* while its bytes are arriving and *settled* once the loader has returned it.
- * Settled bytes are moved out of the live map, so an artwork's second request cannot reset the
- * count its first request already contributed — the bug that made the old per-artwork map jump
- * back to zero halfway through.
- */
 function batchProgressReporter(
   artworkIds: readonly number[],
   onProgress: NonNullable<CardArtworksLoadOptions["onProgress"]>,
@@ -310,8 +276,6 @@ function batchProgressReporter(
   let publishedAt = 0
   const publish = (force: boolean) => {
     const now = Date.now()
-    // Concurrent artworks each report on their own clock, so the aggregate is limited again here:
-    // the bar repaints at a bounded rate no matter how many bundles are in flight.
     if (!force && now - publishedAt < progressIntervalMs) return
     publishedAt = now
     let liveFraction = 0
@@ -340,8 +304,6 @@ function batchProgressReporter(
           live.set(key, { fraction: 1, loadedBytes: previous?.loadedBytes ?? 0, verifying: true })
         } else {
           live.set(key, {
-            // Without a usable size the bundle contributes nothing until it settles, which keeps
-            // the bar honest rather than inventing a denominator.
             fraction: report.totalBytes ? report.loadedBytes / report.totalBytes : 0,
             loadedBytes: report.loadedBytes,
             verifying: false,
@@ -350,7 +312,6 @@ function batchProgressReporter(
         // A bundle reaching its verifying stage is a state change, not a byte tick.
         publish(report.phase === "verifying")
       },
-      /** Idempotent: a missing artwork settles both of its bundles at once. */
       settle: () => {
         if (settled) return
         settled = true

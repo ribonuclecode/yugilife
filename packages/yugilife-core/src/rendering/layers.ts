@@ -10,8 +10,6 @@ import type {
   SemanticAssetId,
 } from "../contracts/index.js"
 
-export { defaultLayerVisibility, flattenLayers, isLayerVisible, walkLayers } from "./layer-tree.js"
-
 export function rendererKey(layer: LayerDefinition) {
   if (
     (layer.kind === "raster" || layer.kind === "canvas") &&

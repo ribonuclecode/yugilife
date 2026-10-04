@@ -10,10 +10,6 @@ export const PageTransitionReadyContext = createContext<PageTransitionReadyConte
   transitioning: false,
 })
 
-/**
- * Route-level data loading can hold the reveal phase of the page transition.
- * Routes that render synchronously never need to call this hook.
- */
 export function usePageTransitionReady(ready: boolean) {
   const { setReady } = useContext(PageTransitionReadyContext)
 

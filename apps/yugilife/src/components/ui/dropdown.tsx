@@ -14,8 +14,9 @@ import {
 } from "react"
 
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
-import { AnimatePresence, motion } from "framer-motion"
+import { motion } from "framer-motion"
 
+import { FocusRing, HoverHighlight, SelectedHighlight } from "@/components/ui/highlights"
 import { DropdownContext, useDropdown, useDropdownMaybe } from "@/components/ui/menu-item"
 import { useProximityHover } from "@/hooks/use-proximity-hover"
 import { Elevated } from "@/lib/elevated"
@@ -28,41 +29,14 @@ import type { DropdownContextValue, MenuItemRenderOptions } from "@/components/u
 import type { SizeVariant } from "@/lib/size-context"
 import type { ComponentPropsWithoutRef, HTMLAttributes, ReactElement, ReactNode } from "react"
 
-// Dropdown opts out of the global pill/rounded shape context — popover surfaces
-// look cleaner with the smaller "rounded" radii regardless of how the rest of
-// the UI is shaped (the heavy pill bubbling distorts perceived padding at this
-// scale and produces the corner-shadow asymmetry).
 const shape = popupShape
-
-// ---------------------------------------------------------------------------
-// Panel context — shared by the inline Dropdown and the popup DropdownContent.
-//
-// The context object itself lives in menu-item.tsx so MenuItem resolves
-// whichever dropdown provider actually wraps it, even when dropdowns built
-// on different primitives render side by side. Re-exported here so the
-// public dropdown API is unchanged.
-// ---------------------------------------------------------------------------
 
 export { useDropdown, useDropdownMaybe }
 export type { DropdownContextValue, MenuItemRenderOptions }
 
-// ---------------------------------------------------------------------------
-// Dropdown (inline panel)
-//
-// An always-rendered panel — no trigger, positioning, or dismissal. Because it
-// sits statically in the page it does NOT claim popup menu semantics: the
-// container is a plain role="group" (pass `aria-label` to name it). The real
-// role="menu" lives on the popup DropdownContent below, which Radix wires to
-// a trigger. Consumers who hand-roll a trigger around the inline panel get
-// grouping semantics rather than a falsely-announced popup menu.
-// ---------------------------------------------------------------------------
-
 interface DropdownProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode
   checkedIndex?: number
-  /** Pins the panel's rows to one step of the size ladder (default 36px,
-   *  compact 28px — see /docs/sizes). Omitted, they follow the surrounding
-   *  SizeProvider. */
   size?: SizeVariant
 }
 
@@ -152,101 +126,25 @@ const Dropdown = forwardRef<HTMLDivElement, DropdownProps>(
           )}
           {...props}
         >
-          {/* Selected background */}
-          <AnimatePresence>
-            {checkedRect && (
-              <motion.div
-                className={`absolute ${shape.bg} bg-active pointer-events-none`}
-                initial={false}
-                animate={{
-                  top: checkedRect.top,
-                  left: checkedRect.left,
-                  width: checkedRect.width,
-                  height: checkedRect.height,
-                  opacity: 1,
-                }}
-                exit={{ opacity: 0, transition: spring.moderate.exit }}
-                transition={{
-                  ...spring.moderate,
-                  opacity: { duration: 0.08 },
-                }}
-              />
-            )}
-          </AnimatePresence>
-
-          {/* Hover background */}
-          <AnimatePresence>
-            {activeRect && (
-              <motion.div
-                key={sessionId}
-                className={`absolute ${shape.bg} bg-hover pointer-events-none`}
-                initial={{
-                  opacity: 0,
-                  top: checkedRect?.top ?? activeRect.top,
-                  left: checkedRect?.left ?? activeRect.left,
-                  width: checkedRect?.width ?? activeRect.width,
-                  height: checkedRect?.height ?? activeRect.height,
-                }}
-                animate={{
-                  opacity: 1,
-                  top: activeRect.top,
-                  left: activeRect.left,
-                  width: activeRect.width,
-                  height: activeRect.height,
-                }}
-                exit={{ opacity: 0, transition: spring.fast.exit }}
-                transition={{
-                  ...spring.fast,
-                  opacity: { duration: 0.08 },
-                }}
-              />
-            )}
-          </AnimatePresence>
-
-          {/* Focus ring */}
-          <AnimatePresence>
-            {focusRect && (
-              <motion.div
-                className={`absolute ${shape.focusRing} pointer-events-none z-20 border border-(--focus-ring)`}
-                initial={false}
-                animate={{
-                  left: focusRect.left - 2,
-                  top: focusRect.top - 2,
-                  width: focusRect.width + 4,
-                  height: focusRect.height + 4,
-                }}
-                exit={{ opacity: 0, transition: spring.fast.exit }}
-                transition={{
-                  ...spring.fast,
-                  opacity: { duration: 0.08 },
-                }}
-              />
-            )}
-          </AnimatePresence>
+          <SelectedHighlight className={shape.bg} rect={checkedRect} />
+          <HoverHighlight
+            className={shape.bg}
+            from={checkedRect}
+            rect={activeRect}
+            sessionKey={sessionId}
+          />
+          <FocusRing className={shape.focusRing} rect={focusRect} />
 
           {children}
         </Elevated>
       </DropdownContext.Provider>
     )
 
-    // A size prop pins every row in the panel to one ladder step.
     return size ? <SizeProvider size={size}>{panel}</SizeProvider> : panel
   },
 )
 
 Dropdown.displayName = "Dropdown"
-
-// ---------------------------------------------------------------------------
-// DropdownMenu (popup root)
-//
-// Built on Radix's DropdownMenu primitive, which owns the trigger wiring,
-// positioning (collision flipping, anchor tracking), dismissal (outside
-// press, focus-out, Escape), roving highlight, typeahead, and close-on-select.
-// This layer keeps the proximity-hover overlays and the
-// spring open/close animation. Radix has no actionsRef-style deferred unmount,
-// so the portal lifetime is managed with local `mounted` state (the same
-// pattern the Dialog and MobileDrawer components use).
-// ---------------------------------------------------------------------------
 
 interface DropdownMenuContextValue {
   open: boolean
@@ -267,9 +165,6 @@ interface DropdownMenuProps {
   defaultOpen?: boolean
   onOpenChange?: (open: boolean) => void
   disabled?: boolean
-  /** Pins trigger-side content and the portalled popup rows to one step of
-   *  the size ladder (default 36px, compact 28px — see /docs/sizes).
-   *  Omitted, they follow the surrounding SizeProvider. */
   size?: SizeVariant
 }
 
@@ -294,14 +189,8 @@ function DropdownMenu({
 
   const ctx = useMemo(() => ({ open, disabled }), [open, disabled])
 
-  // A size prop pins the whole compound (trigger content + portalled popup —
-  // React context crosses portals) to one ladder step.
   const root = (
     <DropdownMenuContext.Provider value={ctx}>
-      {/* Root is always controlled by `open` (defaultOpen seeds local state
-          instead of being forwarded), so DropdownContent can drive the exit
-          animation before the portal unmounts. Non-modal: the page keeps
-          scrolling and the popup tracks its anchor instead of detaching. */}
       <DropdownMenuPrimitive.Root open={open} onOpenChange={handleOpenChange} modal={false}>
         {children}
       </DropdownMenuPrimitive.Root>
@@ -313,24 +202,10 @@ function DropdownMenu({
 
 DropdownMenu.displayName = "DropdownMenu"
 
-// ---------------------------------------------------------------------------
-// DropdownTrigger
-//
-// Radix's DropdownMenu.Trigger behind a Base-UI-style `render` prop, so
-// any element can be the trigger with the same public API:
-//
-//   <DropdownTrigger render={<Button variant="secondary">Open</Button>} />
-//
-// `render` maps to Radix's asChild composition. Root-level `disabled` parity
-// with Base UI's Menu.Root: the flag flows through context onto the trigger.
-// ---------------------------------------------------------------------------
-
 interface DropdownTriggerProps extends Omit<
   ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Trigger>,
   "asChild"
 > {
-  /** Element to render as the trigger (Base-UI-style `render` composition
-   *  API). */
   render?: ReactElement
 }
 
@@ -356,23 +231,11 @@ const DropdownTrigger = forwardRef<HTMLButtonElement, DropdownTriggerProps>(
 
 DropdownTrigger.displayName = "DropdownTrigger"
 
-// ---------------------------------------------------------------------------
-// DropdownContent (popup panel)
-//
-// Portal > Content carrying the exact inline-panel visuals: Elevated surface,
-// proximity-hover overlays, animated selected background, and animated focus
-// ring. Children are wrapped in a RadioGroup so radio-style MenuItems
-// (boolean `checked`) get correct aria-checked from `checkedIndex` (Radix
-// radio values are strings, so the index maps through String()).
-// ---------------------------------------------------------------------------
-
 type RadixContentProps = ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
 
 interface DropdownContentProps {
   children: ReactNode
   className?: string
-  /** Index of the checked item. Drives the animated selected background and
-   *  the radio-group value announced to assistive tech. */
   checkedIndex?: number
   side?: RadixContentProps["side"]
   align?: RadixContentProps["align"]
@@ -399,8 +262,6 @@ const DropdownContent = forwardRef<HTMLDivElement, DropdownContentProps>(
 
     const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
 
-    // Portal lifetime: mounts as soon as `open` flips true; on close it stays
-    // mounted (forceMount below) until the exit tween finishes.
     const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
@@ -409,21 +270,14 @@ const DropdownContent = forwardRef<HTMLDivElement, DropdownContentProps>(
       return () => cancelAnimationFrame(frame)
     }, [open])
 
-    // Fallback release for the deferred unmount: onAnimationComplete on the
-    // motion.div is the primary signal, but rAF-driven animation callbacks
-    // can stall in throttled/background tabs. The popup exits with
-    // spring.fast, so the fallback tracks that tier's exit duration plus a
-    // safety buffer.
     useEffect(() => {
       if (open) return
       const id = setTimeout(() => setMounted(false), exitFallbackMs(spring.fast))
       return () => clearTimeout(id)
     }, [open])
 
-    // Measure items once the popup has mounted.
     useEffect(() => {
       if (!open || !mounted) return
-      // Double rAF: first waits for React commit, second for layout
       let inner: number
       const outer = requestAnimationFrame(() => {
         inner = requestAnimationFrame(() => {
@@ -439,11 +293,6 @@ const DropdownContent = forwardRef<HTMLDivElement, DropdownContentProps>(
     const activeRect = activeIndex !== null ? itemRects[activeIndex] : null
     const checkedRect = checkedIndex != null ? itemRects[checkedIndex] : null
     const focusRect = focusedIndex !== null ? itemRects[focusedIndex] : null
-    // Inside the popup, Radix's Item / RadioItem own the role, aria-checked,
-    // tabIndex, roving highlight, typeahead, and Enter/Space/click activation
-    // (keyboard activation synthesizes a click, so the row div's onClick also
-    // fires for keyboard). The styled div composes via asChild, with the row
-    // content cloned back in as its children.
     const renderMenuItem = useCallback(
       ({
         radio,
@@ -458,8 +307,6 @@ const DropdownContent = forwardRef<HTMLDivElement, DropdownContentProps>(
           asChild: true,
           textValue: label,
           ...(disabled === undefined ? {} : { disabled }),
-          // Radix closes the menu on select by default; preventing the select
-          // event keeps it open — Base UI's closeOnClick={false} parity.
           ...(closeOnClick ? {} : { onSelect: (event: Event) => event.preventDefault() }),
         }
         const item = cloneElement(element, {}, children)
@@ -539,87 +386,19 @@ const DropdownContent = forwardRef<HTMLDivElement, DropdownContentProps>(
                   setActiveIndex(null)
                 }}
                 className={cn(
-                  // min-w tracks the trigger; the available-height guard maps
-                  // Base UI's --available-height to Radix's equivalent var.
                   `relative flex max-h-[min(480px,var(--radix-dropdown-menu-content-available-height))] w-72 max-w-full min-w-(--radix-dropdown-menu-trigger-width) flex-col gap-0.5 overflow-y-auto ${shape.container} p-1 outline-none select-none`,
                   className,
                 )}
               >
-                {/* Selected background */}
-                <AnimatePresence>
-                  {checkedRect && (
-                    <motion.div
-                      className={`absolute ${shape.bg} bg-active pointer-events-none`}
-                      initial={false}
-                      animate={{
-                        top: checkedRect.top,
-                        left: checkedRect.left,
-                        width: checkedRect.width,
-                        height: checkedRect.height,
-                        opacity: 1,
-                      }}
-                      exit={{ opacity: 0, transition: spring.moderate.exit }}
-                      transition={{
-                        ...spring.moderate,
-                        opacity: { duration: 0.08 },
-                      }}
-                    />
-                  )}
-                </AnimatePresence>
+                <SelectedHighlight className={shape.bg} rect={checkedRect} />
+                <HoverHighlight
+                  className={shape.bg}
+                  from={checkedRect}
+                  rect={activeRect}
+                  sessionKey={sessionId}
+                />
+                <FocusRing className={shape.focusRing} rect={focusRect} />
 
-                {/* Hover background */}
-                <AnimatePresence>
-                  {activeRect && (
-                    <motion.div
-                      key={sessionId}
-                      className={`absolute ${shape.bg} bg-hover pointer-events-none`}
-                      initial={{
-                        opacity: 0,
-                        top: checkedRect?.top ?? activeRect.top,
-                        left: checkedRect?.left ?? activeRect.left,
-                        width: checkedRect?.width ?? activeRect.width,
-                        height: checkedRect?.height ?? activeRect.height,
-                      }}
-                      animate={{
-                        opacity: 1,
-                        top: activeRect.top,
-                        left: activeRect.left,
-                        width: activeRect.width,
-                        height: activeRect.height,
-                      }}
-                      exit={{ opacity: 0, transition: spring.fast.exit }}
-                      transition={{
-                        ...spring.fast,
-                        opacity: { duration: 0.08 },
-                      }}
-                    />
-                  )}
-                </AnimatePresence>
-
-                {/* Focus ring */}
-                <AnimatePresence>
-                  {focusRect && (
-                    <motion.div
-                      className={`absolute ${shape.focusRing} pointer-events-none z-20 border border-(--focus-ring)`}
-                      initial={false}
-                      animate={{
-                        left: focusRect.left - 2,
-                        top: focusRect.top - 2,
-                        width: focusRect.width + 4,
-                        height: focusRect.height + 4,
-                      }}
-                      exit={{ opacity: 0, transition: spring.fast.exit }}
-                      transition={{
-                        ...spring.fast,
-                        opacity: { duration: 0.08 },
-                      }}
-                    />
-                  )}
-                </AnimatePresence>
-
-                {/* display: contents keeps items direct flex children of the
-                                panel so proximity measurement and gap layout still work,
-                                while the group provides the radio value context. */}
                 <DropdownMenuPrimitive.RadioGroup
                   className="contents"
                   {...(checkedIndex === undefined ? {} : { value: String(checkedIndex) })}
@@ -637,13 +416,8 @@ const DropdownContent = forwardRef<HTMLDivElement, DropdownContentProps>(
 
 DropdownContent.displayName = "DropdownContent"
 
-// ---------------------------------------------------------------------------
-// DropdownLabel
-// ---------------------------------------------------------------------------
-
 const DropdownLabel = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => {
-    // Group labels are the caption role of the type scale — see /docs/sizes.
     const sizeClasses = useSize()
     return (
       <div
@@ -656,10 +430,6 @@ const DropdownLabel = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>
 )
 
 DropdownLabel.displayName = "DropdownLabel"
-
-// ---------------------------------------------------------------------------
-// DropdownSeparator
-// ---------------------------------------------------------------------------
 
 const DropdownSeparator = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (

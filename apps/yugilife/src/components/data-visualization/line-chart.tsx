@@ -29,95 +29,55 @@ import type { TooltipPlacement } from "./chart-frame"
 import type { ChartGoal, ChartQuadrants } from "./chart-frame"
 import type { ReactNode } from "react"
 
-export type LinePoint = readonly [x: number, y: number]
+type LinePoint = readonly [x: number, y: number]
 
-export interface LineSeries {
+interface LineSeries {
   readonly id: string
   readonly label: string
   readonly points: readonly LinePoint[]
 }
 
-export interface LineAnnotation {
+interface LineAnnotation {
   readonly x: number
   readonly label: string
-  /** A short line under the label, for what the marked position means. */
   readonly detail?: string
 }
 
 export interface LineChartProps {
   readonly title: string
   readonly description?: ReactNode
-  /** Which direction on this chart is the good one. */
   readonly goal?: ChartGoal
   readonly series: readonly LineSeries[]
   readonly xLabel: string
   readonly yLabel: string
   readonly formatX?: (value: number) => string
   readonly formatY?: (value: number) => string
-  /** Marked positions along x — a chosen setting, a threshold, the value that shipped. */
   readonly annotations?: readonly LineAnnotation[]
-  /**
-   * Positions along the curve labelled with a third variable — usually the setting that produced
-   * the point, where both axes are outcomes of it. It cannot have an axis of its own without
-   * making this a dual-axis chart.
-   */
   readonly waypoints?: readonly { readonly x: number; readonly label: string }[]
-  /**
-   * Extra rows for the tooltip and table at a given x. A second measure on a different scale
-   * belongs here rather than on a second y-axis, which would invite comparing two things that are
-   * not comparable.
-   */
   readonly secondary?: { readonly label: string; readonly at: (x: number) => string }
-  /** Splits the plot into four and shades the corner that would be a win. */
   readonly quadrants?: ChartQuadrants
-  /** Base-10 along x, for points that bunch into one end of a linear axis. */
   readonly xScale?: "linear" | "log"
   readonly footnote?: ReactNode
   readonly height?: number
-  /**
-   * How many rows the table view may show. Past it the table takes an evenly spaced sample and
-   * says so; every annotated position is kept, whatever the sampling.
-   */
   readonly tableRowLimit?: number
 }
 
-// The bottom and left insets carry an axis title under the ticks, so neither is only tick height.
 const PADDING = { bottom: 56, left: 52, right: 18, top: 18 }
-/**
- * Text inside the plot is drawn with a halo of the page behind it: a label has to sit near the
- * curve it names, and near enough is sometimes on top of it.
- */
 const HALO = {
   paintOrder: "stroke",
   stroke: "var(--background)",
   strokeLinejoin: "round",
   strokeWidth: 3.5,
 } as const
-/** Approximate advance of one 13px tabular digit, for sizing the y-axis gutter to its labels. */
 const AXIS_CHAR_WIDTH = 7.4
-/** Space the rotated y-axis title takes to the left of its ticks. */
 const Y_TITLE_SPACE = 22
-/**
- * Clear space a waypoint label needs from its neighbours, the annotations, and the end markers.
- * On a narrow plot waypoints thin out rather than overlap; what is dropped stays in the readout.
- */
 const WAYPOINT_MIN_GAP = 34
-/** Approximate advance of one character in the waypoint label's type size. */
 const WAYPOINT_CHAR_WIDTH = 6.6
 
 function waypointWidth(label: string) {
   return label.length * WAYPOINT_CHAR_WIDTH
 }
 
-/**
- * A line chart with a crosshair readout.
- *
- * The y-axis is framed around the data rather than forced to zero. A line carries shape, not
- * magnitude from a baseline, and padding a curve with empty space below it flattens the only thing
- * the reader came for — where it bends. (A bar chart is the opposite case: truncating one lies
- * about the value, so `BarChart` always starts at zero.) There is no area wash underneath for the
- * same reason: a filled region under a floating baseline implies a quantity it is not measuring.
- */
 export function LineChart({
   annotations = [],
   description,
@@ -146,8 +106,6 @@ export function LineChart({
       ? logTicks(Math.min(...xValues), Math.max(...xValues))
       : niceTicks(Math.min(...xValues), Math.max(...xValues), 5)
   const yValues = series.flatMap((entry) => entry.points.map(([, y]) => y))
-  // A line is read for its shape, so the axis hugs the data: six steps keep the frame close
-  // without the ticks landing on unrecognisable numbers.
   const yDomain = niceTicks(Math.min(...yValues), Math.max(...yValues), 6)
   const tableValues = sampleForTable(xValues, tableRowLimit, [
     ...annotations.map((annotation) => annotation.x),
@@ -255,8 +213,6 @@ function LinePlot({
 }: LinePlotProps) {
   const reduceMotion = useChartMotion()
   const [revealRef, revealed] = useChartReveal<HTMLDivElement>()
-  // The gutter is sized to the widest tick it has to hold. A fixed inset clips a label the moment
-  // the formatter gains a decimal place, and the axis is the one thing that must always be legible.
   const widestTick = Math.max(...yTicks.map((tick) => formatY(tick).length))
   const plotLeft =
     Math.max(PADDING.left, Math.ceil(widestTick * AXIS_CHAR_WIDTH) + 14) + Y_TITLE_SPACE
@@ -270,8 +226,6 @@ function LinePlot({
   const activeX = activeIndex === null ? undefined : xValues[activeIndex]
   const primary = series[0]
 
-  // `currentTarget` is the <svg> itself, so the plot needs no ref of its own to convert a client
-  // position into plot coordinates.
   function handleMove(event: { clientX: number; currentTarget: SVGSVGElement }) {
     const bounds = event.currentTarget.getBoundingClientRect()
     const pointerX = event.clientX - bounds.left
@@ -283,8 +237,6 @@ function LinePlot({
     <div className="relative" ref={revealRef}>
       <svg
         aria-label={`${yLabel} from ${formatX(xDomain[0])} to ${formatX(xDomain[1])}`}
-        // Focusable for the arrow-key readout. The browser default box appears on a plain click
-        // too, so this shows a ring only for keyboard focus.
         className="block touch-pan-y rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
         height={height}
         onBlur={() => onMove(null)}
@@ -301,8 +253,6 @@ function LinePlot({
         tabIndex={0}
         width={width}
       >
-        {/* Under the gridlines and the curve. The vertical split is dropped when an annotation
-            already stands there, to avoid doubling it. */}
         {quadrants !== undefined && (
           <ChartQuadrantLayer
             hideXSplit={annotations.some((annotation) => annotation.x === quadrants.x)}
@@ -315,8 +265,6 @@ function LinePlot({
           />
         )}
 
-        {/* Only a log axis gets vertical rules, and only very faint ones. Their uneven spacing is
-            the point: it shows the axis compressing, which a linear axis has no need to say. */}
         {xScale === "log" &&
           logMinorTicks(xDomain[0], xDomain[1]).map((tick) => (
             <line
@@ -356,7 +304,6 @@ function LinePlot({
           <text
             className={cn(FIGURE_TYPE.axis, "fill-muted-foreground tabular-nums")}
             key={`x-${tick}`}
-            // The end ticks anchor inward so neither runs off the edge of the chart.
             textAnchor={index === 0 ? "start" : index === xTicks.length - 1 ? "end" : "middle"}
             x={x(tick)}
             y={height - 32}
@@ -365,8 +312,6 @@ function LinePlot({
           </text>
         ))}
 
-        {/* Both axes are named on the plot: the title above says what the chart is about, not what
-            its axes measure. */}
         <text
           className={cn(FIGURE_TYPE.label, "fill-muted-foreground")}
           textAnchor="middle"
@@ -400,7 +345,6 @@ function LinePlot({
           />
         ))}
 
-        {/* The third variable, written along the curve it produced. */}
         {primary &&
           thinWaypoints(waypoints, (value) => x(value), [
             ...annotations.map((annotation) => annotation.x),
@@ -410,8 +354,6 @@ function LinePlot({
             if (!point) return null
             const px = x(waypoint.x)
             const py = y(point[1])
-            // Where the curve is steeper than 45° the space above a point is occupied by the curve
-            // itself, so the label steps aside instead of sitting on the line.
             const index = primary.points.indexOf(point)
             const neighbour = primary.points[index + 1] ?? primary.points[index - 1]
             const steep =
@@ -433,8 +375,6 @@ function LinePlot({
                   {...HALO}
                   textAnchor={placement.anchor}
                   x={placement.x}
-                  // Otherwise above the point, unless that would push the label into the band the
-                  // annotation labels occupy.
                   y={steep ? py + 4 : py > PADDING.top + 26 ? py - 12 : py + 20}
                 >
                   {waypoint.label}
@@ -449,17 +389,12 @@ function LinePlot({
             if (!point) return null
             const px = x(annotation.x)
             const py = y(point[1])
-            // The label block is placed on whichever side of its rule actually has room for it,
-            // and kept inside the plot. Choosing by which half of the chart the rule is in says
-            // nothing about whether the text fits, which is how it ends up against the y-axis.
             const estimate = Math.max(
               annotation.label.length * 8.2,
               (annotation.detail?.length ?? 0) * 7.6,
             )
             const roomLeft = px - 12 - (plotLeft + 8)
             const roomRight = plotRight - 8 - (px + 12)
-            // The block sits above its mark, so it belongs on whichever side the curve is falling
-            // away from; the other side is the one the curve came from and is already occupied.
             const ordered = [...primary.points].sort((a, b) => a[0] - b[0])
             const at = ordered.findIndex(([pointX]) => pointX === annotation.x)
             const before = ordered[at - 1]
@@ -473,15 +408,11 @@ function LinePlot({
             const labelX = toLeft
               ? Math.max(px - 12, plotLeft + 8 + estimate)
               : Math.min(px + 12, plotRight - 8 - estimate)
-            // The block sits above its own mark with a short stem down to it, rather than at the
-            // top of the plot. Parked up there it needed a rule the height of the chart to say
-            // which point it meant, and a rule that long divides the figure in two.
             const detailY = py - 14
             const labelY = detailY - (annotation.detail === undefined ? 0 : 16)
             const stemTop = detailY + 5
             return (
               <g key={annotation.label}>
-                {/* A stem, not a divider: from just under the label down to the mark it names. */}
                 {py - 9 > stemTop && (
                   <line
                     stroke="var(--chart-muted)"
@@ -527,9 +458,6 @@ function LinePlot({
             )
           })}
 
-        {/* End markers carry the values the axis rounds away. Found by x rather than by position
-            in the array: a series recorded from its far end backwards is still a series, and
-            trusting the order puts both labels outside the plot on opposite sides. */}
         {primary &&
           [
             primary.points.reduce((low, point) => (point[0] < low[0] ? point : low)),
@@ -538,8 +466,6 @@ function LinePlot({
             if (!point) return null
             const px = x(point[0])
             const py = y(point[1])
-            // A point near the ceiling would put its label in the band the annotation labels use,
-            // so it flips underneath instead of stacking two unrelated labels on one line.
             const labelAbove = py > PADDING.top + 24
             return (
               <g key={index === 0 ? "start" : "end"}>
@@ -598,9 +524,6 @@ function LinePlot({
       </svg>
       {activeX !== undefined && (
         <ChartTooltip
-          // The axis title carries the unit for the axis; the value carries its own. Printing both
-          // in the heading reads as a stutter ("Smaller than PNG (%) 88%"), so the parenthetical
-          // is dropped here and nowhere else.
           heading={`${xLabel.replace(/\s*\([^)]*\)\s*$/, "")} ${formatX(activeX)}`}
           rows={[
             ...series.flatMap((entry, index) => {
@@ -644,13 +567,6 @@ function LinePlot({
   )
 }
 
-/**
- * The quadrant beside the mark that the curve is not running through.
- *
- * A curve climbing to the right leaves its upper left empty; one falling to the right leaves its
- * upper right empty. Putting the readout there means it never lands on the line the reader is
- * tracing, which a centred readout does constantly on a steep section.
- */
 function tooltipPlacement(
   points: readonly LinePoint[] | undefined,
   activeX: number,
@@ -667,12 +583,6 @@ function tooltipPlacement(
   return { dx: rising ? -1 : 1, dy: -1 }
 }
 
-/**
- * Drops waypoint labels that would crowd another label, in the order they were given.
- *
- * Obstacles are the positions that already carry a label of their own — the annotations and the
- * two end markers — because those say something the waypoints do not.
- */
 function thinWaypoints(
   waypoints: readonly { readonly x: number; readonly label: string }[],
   toPixels: (value: number) => number,
@@ -682,7 +592,6 @@ function thinWaypoints(
   const kept: { readonly x: number; readonly label: string }[] = []
   for (const waypoint of waypoints) {
     const px = toPixels(waypoint.x)
-    // A long label needs more room than a short one; the fixed gap is only the floor.
     const clearance = Math.max(WAYPOINT_MIN_GAP, waypointWidth(waypoint.label) * 0.6 + 12)
     if (taken.some((other) => Math.abs(other - px) < clearance)) continue
     taken.push(px)
@@ -691,13 +600,6 @@ function thinWaypoints(
   return kept
 }
 
-/**
- * Keeps a waypoint label inside the plot.
- *
- * A steep point puts its label beside itself rather than on the curve, which near an edge is the
- * one direction with no room; it flips to the other side instead of hanging over the axis. A label
- * sitting above its point is centred, so it only needs nudging in from either end.
- */
 function waypointLabel(
   label: string,
   px: number,
@@ -718,10 +620,6 @@ function waypointLabel(
   } as const
 }
 
-/**
- * An evenly spaced sample of `values`, always including the ends and any position that carries an
- * annotation, capped at `limit` rows.
- */
 function sampleForTable(
   values: readonly number[],
   limit: number,

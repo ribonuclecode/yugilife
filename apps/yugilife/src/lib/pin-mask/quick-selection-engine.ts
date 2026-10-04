@@ -29,13 +29,7 @@ interface AlphaKernelExports extends WebAssembly.Exports {
   mask_alpha_glow(alpha: number, width: number, height: number, glow: number): number
 }
 
-/**
- * Dot segmentation is intentionally bounded to a worker-side working plane. Artwork assets are
- * often 2K–4K square, while the superpixel graph does not gain useful detail from running every
- * pixel at that size. The resulting mask is expanded back to the source dimensions before it
- * crosses the worker boundary again, so card rendering and persisted masks retain native size.
- */
-export const MAX_SELECTION_DIMENSION = 768
+const MAX_SELECTION_DIMENSION = 768
 
 let modulePromise: Promise<WebAssembly.Module> | undefined
 
@@ -99,13 +93,6 @@ function resampleRgba(
   return { height, pixels, width }
 }
 
-/**
- * Stateful adapter around the checked-in masking kernel.
- *
- * This class deliberately has no DOM or React dependency. It is owned by the pin-mask worker;
- * keeping the mutable WASM heap and prepared-image state there prevents a long segmentation pass
- * from blocking the editor's event loop.
- */
 export class QuickSelection {
   readonly #exports: QuickSelectionExports
   readonly #hardPointer: number
@@ -229,7 +216,6 @@ export class QuickSelection {
   }
 }
 
-/** WASM-backed mask presentation processor used by the Yugilife editor only. */
 export class MaskEffects {
   readonly #exports: AlphaKernelExports
   readonly #source: number
@@ -252,7 +238,6 @@ export class MaskEffects {
     this.#height = height
   }
 
-  /** One immutable source per instance; anti-alias coverage is prepared lazily and reused. */
   static async prepare(alpha: Uint8Array, width: number, height: number) {
     if (
       !Number.isSafeInteger(width) ||
@@ -273,7 +258,6 @@ export class MaskEffects {
     return new MaskEffects(exports, source, output, width, height)
   }
 
-  /** Borrowed WASM view: consume before the next process call; never transfer its buffer. */
   process(effects: ArtworkMaskEffects) {
     const size = this.#width * this.#height
     if (effects.antiAlias === true && !this.#smoothed) {

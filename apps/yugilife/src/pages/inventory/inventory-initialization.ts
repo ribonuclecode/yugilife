@@ -9,10 +9,6 @@ import {
 import { readLegacyEditorDocument } from "./persistence/legacy-editor-storage"
 import { createInventorySeed } from "./seed/inventory-seed"
 
-/**
- * Runs the one-time persistence bootstrap shared by every route that can create a first card.
- * Legacy recovery has priority over product samples and removes its source only after commit.
- */
 export async function initializeInventory() {
   let summaries = await listInventoryCards()
   if (summaries.length > 0) return summaries

@@ -51,7 +51,6 @@ function ruleAffectsLayer(
   )
 }
 
-/** Creates a render-scoped resolver so semantic dependencies are derived only once per card. */
 export function createLayerSourceFieldResolver(
   template: CardTemplate,
   presentation: ResolvedCardPresentation,
@@ -70,9 +69,7 @@ export function createLayerSourceFieldResolver(
     if ("semanticPath" in layer && typeof layer.semanticPath === "string") {
       addPath(layer.semanticPath)
     }
-    // A transform-mode gate carries no authored card fields, but it still decides whether a style or
-    // rule is active, so activity is tested through the shared matcher and only the semantic clause
-    // contributes source fields.
+    // Transform gates decide activity but contribute no authored fields.
     const isActive = (gate: Parameters<typeof matchesPresentationGate>[2]) =>
       matchesPresentationGate(presentation.semantics, presentation.artworkTransforms, gate)
     if (layer.kind === "text") {
@@ -88,13 +85,4 @@ export function createLayerSourceFieldResolver(
       .forEach(addPath)
     return Object.freeze([...fields])
   }
-}
-
-/** Resolves the authored fields which caused one logical layer's current visible presentation. */
-export function layerSourceFields(
-  template: CardTemplate,
-  layer: LayerDefinition,
-  presentation: ResolvedCardPresentation,
-) {
-  return createLayerSourceFieldResolver(template, presentation)(layer)
 }

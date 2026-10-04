@@ -13,19 +13,6 @@ import sam2Cutout from "./assets/stages/sam2-cutout.webp"
 import softAlpha from "./assets/stages/soft-alpha.webp"
 import softCutout from "./assets/stages/soft-cutout.webp"
 
-/**
- * One edge region of one artwork, put through every stage of the SAM3 pipeline.
- *
- * A stage is a block — a label and its two pictures — and the blocks tile two-up, so a group is
- * never split across a row at either width. The region itself leads the grid at the same size as
- * every stage, so it can be compared against any of them without the eye changing scale; its left
- * tile is an empty slot rather than a picture, which keeps the left column alpha and the right
- * column picture on every row.
- *
- * ToonOut is deliberately excluded: this sheet is the refinement of one boundary, and a model that
- * never saw a phrase belongs to the question the next section asks. Same region as the close-up
- * figure, so the two can be read against each other.
- */
 const STAGES = [
   {
     alpha: rawAlpha,
@@ -63,9 +50,6 @@ export function EdgeCropSheet() {
   return (
     <figure>
       <div className="grid gap-x-5 gap-y-6 sm:grid-cols-2">
-        {/* The region the crops come from, first, so the reader has the thing every stage was run
-            against before they see any of them. One picture in a two-column row, so it is the same
-            size as every tile beside it and the rows stay level. */}
         <div>
           <div className="min-h-14 sm:min-h-10">
             <div className={cn(FIGURE_TYPE.label, "text-foreground font-medium")}>
@@ -76,10 +60,6 @@ export function EdgeCropSheet() {
             </div>
           </div>
           <div className="mt-1.5 grid grid-cols-2 gap-2">
-            {/* An empty slot rather than a picture: this row has no mask, and a white square
-                would be a mask that keeps everything, which is a different claim. Struck through
-                and named, so the left column is the alpha the whole way down and the one row
-                without one says so. */}
             <div className="border-border bg-muted text-muted-foreground relative aspect-square overflow-hidden rounded-lg border">
               <svg
                 aria-hidden="true"
@@ -99,7 +79,6 @@ export function EdgeCropSheet() {
                 />
               </svg>
               <div className="absolute inset-0 grid place-items-center">
-                {/* The background behind the words keeps the rule from running through them. */}
                 <span className={cn(FIGURE_TYPE.note, "bg-muted px-1.5")}>No alpha</span>
               </div>
             </div>
@@ -111,11 +90,7 @@ export function EdgeCropSheet() {
         </div>
 
         {STAGES.map((stage) => (
-          // Each stage is one block: its label, then its two pictures. Blocks tile two-up, so the
-          // grouping survives both the wide layout and the narrow one.
           <div key={stage.label}>
-            {/* The label and its note take one line each on a wide screen and can wrap on a narrow
-                one; holding the pair to a fixed height keeps every block's pictures on one line. */}
             <div className="min-h-14 sm:min-h-10">
               <div className={cn(FIGURE_TYPE.label, "text-foreground font-medium")}>
                 {stage.label}

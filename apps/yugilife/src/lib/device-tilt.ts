@@ -82,8 +82,6 @@ function requestPermissionFromGesture() {
       stopGestureListener()
     })
     .catch(() => {
-      // A rejected request can mean the browser did not accept this specific
-      // interaction as activation. Leave it retryable on the next gesture.
       permission = "idle"
     })
 }
@@ -97,8 +95,6 @@ function ensureDeviceTiltStarted() {
     startListening()
   } else if (!gestureListening && permission === "idle") {
     gestureListening = true
-    // Capture the first interaction anywhere in the app. iOS requires the
-    // permission call to happen synchronously inside a user gesture.
     window.addEventListener("pointerdown", requestPermissionFromGesture, {
       capture: true,
       passive: true,

@@ -117,6 +117,7 @@ export {
   renderCard,
   resolveRasterOutputDimensions,
 } from "./rendering/index.js"
+export { createLayerSourceFieldResolver } from "./rendering/layer-source-fields.js"
 export type { LayerVisit } from "./rendering/layer-tree.js"
 export {
   collectLayerGroups,
@@ -139,6 +140,7 @@ export {
   richTextLineLengths,
 } from "./rich-text.js"
 export { deriveCardSemantics, matchesSemanticCondition } from "./semantics.js"
+export { compareTemplateVersions, isTemplateVersion } from "./template-version.js"
 export {
   createCardFromTemplate,
   TemplateValidationError,

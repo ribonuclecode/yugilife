@@ -9,28 +9,14 @@ const formats = [
   { line: "Sharp text, any size.", name: "SVG" },
 ] as const
 
-/**
- * Each format appears twice, so there is always a copy waiting out of sight above and below and
- * the reel can turn forever in either direction: a copy that has to jump to the other end only
- * ever does so while it is hidden.
- */
 const copies = formats.length * 2
-/** The reel moves on by itself after this long without a turn. */
 const autoAdvanceMs = 5000
-/** Wheel travel, in pixels, that turns the reel one step. */
 const wheelStep = 40
-/** After a step, further wheel input is ignored this long, so a trackpad fling moves it once. */
 const wheelRestMs = 180
-/** Pixels per line and per page, for wheels that report in those units instead. */
 const wheelUnit = [1, 16, 400] as const
 
 const wrap = (value: number, size: number) => ((value % size) + size) % size
 
-/**
- * A vertical reel of the export formats, turned by hand: the wheel, a drag, a click on the format
- * above or below, or the arrow keys. The selected format sits in the middle in the accent colour,
- * with its neighbours blurred above and below, and the line under it describes it.
- */
 export function FormatReel() {
   const [position, setPosition] = useState(formats.length - 1)
   const reelRef = useRef<HTMLDivElement>(null)
@@ -55,7 +41,6 @@ export function FormatReel() {
     return () => reel.removeEventListener("wheel", onWheel)
   }, [])
 
-  // Every turn, by hand or by itself, restarts the wait for the next one.
   useEffect(() => {
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return
     const timer = window.setTimeout(() => setPosition((current) => current + 1), autoAdvanceMs)
@@ -100,7 +85,6 @@ export function FormatReel() {
         <div className="bento-reel-window">
           {Array.from({ length: copies }, (_, index) => {
             const format = formats[index % formats.length]!
-            // Where this copy sits relative to the middle row, from four above to three below.
             const offset = wrap(index - position + formats.length, copies) - formats.length
             const current = offset === 0
             return (

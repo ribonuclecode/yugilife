@@ -249,7 +249,6 @@ class GpuPolynomialGrader {
 
 const graders = new WeakMap<Document, GpuPolynomialGrader | false>()
 
-/** Attempts GPU grading and returns undefined when WebGL2 is unavailable or rejects the source. */
 export function tryGpuPolynomialGrading(
   source: GpuTextureSource,
   region: SourceRectangle,

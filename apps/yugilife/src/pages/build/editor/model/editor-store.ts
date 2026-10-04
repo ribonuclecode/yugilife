@@ -19,8 +19,6 @@ import type {
   TextTypographyPatch,
 } from "yugilife-core"
 
-export type { EditorMode } from "./editor-document"
-
 interface EditorState extends EditorDocumentState {
   applyCardPatch: (patch: Readonly<Record<string, CardFieldValue>>) => void
   applyCardPatchWithArtworkMask: (
@@ -55,12 +53,6 @@ interface EditorState extends EditorDocumentState {
   setTemplateIdentity: (templateId: TemplateId, templateVersion: string) => void
 }
 
-/**
- * An editor-authored typography patch. `undefined` removes a stored override key entirely, which
- * core's `TextTypographyPatch` deliberately disallows for its required properties: core describes a
- * patch that will be persisted and validated, while this describes the edit that produces one. The
- * store strips `undefined` keys, so what reaches storage is always a valid core patch.
- */
 export type EditorTypographyPatch = {
   [Key in keyof TextTypographyPatch]?: TextTypographyPatch[Key] | undefined
 }
@@ -265,39 +257,3 @@ export const useEditorStore = create<EditorState>()((set) => ({
     }),
   setTemplateIdentity: (templateId, templateVersion) => set({ templateId, templateVersion }),
 }))
-
-export const editorSelectors = {
-  applyCardPatch: (state: EditorState) => state.applyCardPatch,
-  applyCardPatchWithArtworkMask: (state: EditorState) => state.applyCardPatchWithArtworkMask,
-  artworkMask: (state: EditorState) => state.artworkMask,
-  artworkMaskEffects: (state: EditorState) => state.artworkMaskEffects,
-  card: (state: EditorState) => state.card,
-  clearAllPresentationOverrides: (state: EditorState) => state.clearAllPresentationOverrides,
-  clearArtworkMaskEffects: (state: EditorState) => state.clearArtworkMaskEffects,
-  clearArtworkTransform: (state: EditorState) => state.clearArtworkTransform,
-  clearLayerMaskOverride: (state: EditorState) => state.clearLayerMaskOverride,
-  clearLayerOverride: (state: EditorState) => state.clearLayerOverride,
-  clearPresetOverride: (state: EditorState) => state.clearPresetOverride,
-  clearTextFitProfile: (state: EditorState) => state.clearTextFitProfile,
-  clearTextTypography: (state: EditorState) => state.clearTextTypography,
-  layers: (state: EditorState) => state.layers,
-  mode: (state: EditorState) => state.mode,
-  presetOverrides: (state: EditorState) => state.presetOverrides,
-  presentationOverrides: (state: EditorState) => state.presentationOverrides,
-  replaceDocument: (state: EditorState) => state.replaceDocument,
-  reset: (state: EditorState) => state.reset,
-  setAllLayers: (state: EditorState) => state.setAllLayers,
-  setArtworkTransform: (state: EditorState) => state.setArtworkTransform,
-  setArtworkMaskEffects: (state: EditorState) => state.setArtworkMaskEffects,
-  setArtworkMask: (state: EditorState) => state.setArtworkMask,
-  completeArtworkMask: (state: EditorState) => state.completeArtworkMask,
-  setField: (state: EditorState) => state.setField,
-  setLayer: (state: EditorState) => state.setLayer,
-  setMode: (state: EditorState) => state.setMode,
-  setPresetOverride: (state: EditorState) => state.setPresetOverride,
-  setTextFitProfile: (state: EditorState) => state.setTextFitProfile,
-  setTextTypography: (state: EditorState) => state.setTextTypography,
-  setTemplateIdentity: (state: EditorState) => state.setTemplateIdentity,
-  templateId: (state: EditorState) => state.templateId,
-  templateVersion: (state: EditorState) => state.templateVersion,
-}

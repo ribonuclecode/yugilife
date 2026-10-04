@@ -2,6 +2,7 @@ import { renderCard, TemplateValidationError } from "yugilife-core"
 
 import type {
   BrowserApi,
+  BrowserErrorCode,
   BrowserRenderResponse,
   BrowserSmokeResult,
   SerializedRenderRequest,
@@ -26,31 +27,18 @@ const smokeTemplate: CardTemplate = {
   schemaVersion: 1,
 }
 
-function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error)
-}
-
-function isAborted(error: unknown) {
-  return error instanceof DOMException && error.name === "AbortError"
+function failure(code: BrowserErrorCode, message: string): BrowserRenderResponse {
+  return { error: { code, message }, ok: false }
 }
 
 function serializeError(error: unknown): BrowserRenderResponse {
-  if (isAborted(error)) {
-    return {
-      error: { code: "ABORTED", message: "The render was aborted." },
-      ok: false,
-    }
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return failure("ABORTED", "The render was aborted.")
   }
   if (error instanceof TemplateValidationError) {
-    return {
-      error: { code: "RENDER_VALIDATION_FAILED", message: error.message },
-      ok: false,
-    }
+    return failure("RENDER_VALIDATION_FAILED", error.message)
   }
-  return {
-    error: { code: "RENDER_FAILED", message: errorMessage(error) },
-    ok: false,
-  }
+  return failure("RENDER_FAILED", error instanceof Error ? error.message : String(error))
 }
 
 function asDataUrl(file: string) {
@@ -58,44 +46,14 @@ function asDataUrl(file: string) {
   return file
 }
 
-function blobToDataUrl(blob: Blob, signal: AbortSignal) {
-  const abortReason = (): Error =>
-    signal.reason instanceof Error
-      ? signal.reason
-      : new DOMException("The render was aborted.", "AbortError")
-  if (signal.aborted) throw abortReason()
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    const abort = () => reader.abort()
-    const cleanup = () => signal.removeEventListener("abort", abort)
-    reader.addEventListener(
-      "load",
-      () => {
-        cleanup()
-        if (typeof reader.result === "string") resolve(reader.result)
-        else reject(new Error("Image encoding did not produce a data URL."))
-      },
-      { once: true },
-    )
-    reader.addEventListener(
-      "error",
-      () => {
-        cleanup()
-        reject(reader.error ?? new Error("Could not encode image output."))
-      },
-      { once: true },
-    )
-    reader.addEventListener(
-      "abort",
-      () => {
-        cleanup()
-        reject(abortReason())
-      },
-      { once: true },
-    )
-    signal.addEventListener("abort", abort, { once: true })
-    reader.readAsDataURL(blob)
-  })
+async function blobToDataUrl(blob: Blob, signal: AbortSignal) {
+  const bytes = new Uint8Array(await blob.arrayBuffer())
+  signal.throwIfAborted()
+  let binary = ""
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000))
+  }
+  return `data:${blob.type};base64,${btoa(binary)}`
 }
 
 function warningsFor(rendered: Awaited<ReturnType<typeof renderCard>>) {
@@ -109,12 +67,8 @@ function warningsFor(rendered: Awaited<ReturnType<typeof renderCard>>) {
 }
 
 async function render(request: SerializedRenderRequest): Promise<BrowserRenderResponse> {
-  if (activeAbortController) {
-    return {
-      error: { code: "RENDER_FAILED", message: "The browser renderer is already busy." },
-      ok: false,
-    }
-  }
+  if (activeAbortController)
+    return failure("RENDER_FAILED", "The browser renderer is already busy.")
   const controller = new AbortController()
   activeAbortController = controller
   try {

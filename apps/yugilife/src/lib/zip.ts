@@ -45,7 +45,6 @@ async function bytes(value: ZipFile["data"]) {
   return new Uint8Array(await value.arrayBuffer())
 }
 
-/** Creates a standards-compliant uncompressed ZIP without adding a runtime compression dependency. */
 export async function createZipBlob(files: readonly ZipFile[]) {
   const now = dosDateTime(new Date())
   const localParts: ArrayBuffer[] = []

@@ -1,10 +1,11 @@
+import { requestResult, transactionComplete } from "@/lib/indexed-db"
 const databaseName = "yugilife-card-catalog"
 const databaseVersion = 2
 const catalogStore = "catalogs"
 const maximumCompressedBytes = 2 * 1024 * 1024
 const maximumUncompressedBytes = 8 * 1024 * 1024
 
-export type CardCatalogStorageMode = "indexeddb" | "memory"
+type CardCatalogStorageMode = "indexeddb" | "memory"
 
 export interface CachedCardCatalog {
   artifactSha256: string
@@ -25,27 +26,6 @@ export function getCardCatalogStorageMode() {
 
 function switchToMemory() {
   storageMode = "memory"
-}
-
-function requestResult<T>(request: IDBRequest<T>) {
-  return new Promise<T>((resolve, reject) => {
-    request.addEventListener("success", () => resolve(request.result))
-    request.addEventListener("error", () =>
-      reject(request.error ?? new Error("IndexedDB request failed")),
-    )
-  })
-}
-
-function transactionComplete(transaction: IDBTransaction) {
-  return new Promise<void>((resolve, reject) => {
-    transaction.addEventListener("complete", () => resolve())
-    transaction.addEventListener("abort", () =>
-      reject(transaction.error ?? new Error("IndexedDB transaction aborted")),
-    )
-    transaction.addEventListener("error", () =>
-      reject(transaction.error ?? new Error("IndexedDB transaction failed")),
-    )
-  })
 }
 
 function openDatabase() {

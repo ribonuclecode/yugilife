@@ -1,8 +1,12 @@
+import { isTemplateVersion } from "yugilife-core"
+
+import { isRecord } from "@/lib/utils"
+
 import {
   currentEditorDocumentVersion,
   migrateEditorDocumentSchema,
 } from "../../migrations/document"
-import { isTemplateVersion, migrateEditorTemplateVersion } from "../../migrations/template"
+import { migrateEditorTemplateVersion } from "../../migrations/template"
 import { requireCompletedArtworkMask } from "../model/artwork-mask-state"
 import {
   createInitialCard,
@@ -25,10 +29,6 @@ interface EditorDocumentFile {
   document: unknown
   format: typeof editorDocumentFormat
   schemaVersion: number
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
 const editorDocumentKeys = new Set([
@@ -203,9 +203,7 @@ export function parseEditorDocument(source: string): EditorDocumentState {
 
   const document: EditorDocumentState = {
     artworkMask: parseArtworkMask(migrated.artworkMask),
-    // Current-schema mask metadata is never defaulted here; defaults belong to the adjacent legacy
-    // migrations. Forward whatever the file contained and let the strict validator below reject a
-    // missing or malformed value, exactly as it does for `artworkMask`.
+    // Never defaulted here: legacy migrations own defaults and the validator rejects bad values.
     artworkMaskEffects: migrated.artworkMaskEffects as EditorDocumentState["artworkMaskEffects"],
     card: Object.fromEntries(
       Object.entries({ ...initial.card, ...migrated.card }).map(([field, value]) => [

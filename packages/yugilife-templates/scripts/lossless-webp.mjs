@@ -1,9 +1,9 @@
 import path from "node:path"
-import { fileURLToPath } from "node:url"
 
 import sharp from "sharp"
 
-const packageDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+import { packageDirectory } from "./paths.mjs"
+
 const rasterImageExtension = /\.(?:jpe?g|png|webp)$/i
 
 export function isYugilifeRasterImage(file) {

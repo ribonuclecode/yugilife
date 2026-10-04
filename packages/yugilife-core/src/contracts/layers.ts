@@ -112,19 +112,12 @@ export type TextFitBlocks = LeadingAuthoredLineFitBlocks
 /** Expands inter-word spacing on non-final soft-wrapped multiline lines. */
 export type TextAlign = "justify"
 
-/**
- * Paint applied around glyph geometry. Stroke is painted, never measured: it never changes glyph
- * advances, line boxes, wrapping, or automatic fit-profile selection, so widening a stroke cannot
- * feed back into the size of the text it outlines.
- */
+/** Paint around glyph geometry. Stroke is never measured, so it cannot affect text fitting. */
 export interface TextStroke {
   color: string
   /** Visible stroke width in template pixels, measured outward for the default `outer` alignment. */
   width: number
-  /**
-   * `outer` keeps glyph interiors at their authored weight, matching printed card-title outlines.
-   * `center` is SVG's own behavior, where the stroke straddles the outline and visibly thins glyphs.
-   */
+  /** `outer` keeps glyph interiors at their authored weight; `center` straddles the outline. */
   align?: "center" | "outer" | undefined
   linejoin?: "bevel" | "miter" | "round" | undefined
   opacity?: number | undefined

@@ -27,11 +27,6 @@ function Dialog({
   defaultOpen,
   ...props
 }: DialogPrimitive.DialogProps) {
-  // Internal state always tracks changes, and the consumer's onOpenChange is
-  // notified alongside it — a listener must not replace state handling, or an
-  // uncontrolled dialog with an onOpenChange prop could never open. The Root
-  // below is always controlled by `open`, so defaultOpen seeds our state
-  // instead of being forwarded.
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen ?? false)
   const open = controlledOpen ?? uncontrolledOpen
   const handleOpenChange = (next: boolean) => {
@@ -53,11 +48,6 @@ const DialogClose = DialogPrimitive.Close
 
 interface DialogContentProps extends ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
   size?: "sm" | "lg"
-  /** Portal target. When set, the overlay and panel render inside this element
-   *  (positioned `absolute`) instead of covering the viewport (`fixed`). Pair
-   *  with a `position: relative; overflow: hidden` container — and usually
-   *  `<Dialog modal={false}>` — to scope a dialog to a bounded region, e.g. a
-   *  docs preview. Defaults to the document body / full-viewport behaviour. */
   container?: HTMLElement | null
 }
 
@@ -68,8 +58,6 @@ const DialogContent = forwardRef<HTMLDivElement, DialogContentProps>(
     const shape = useShape()
     const substrate = useSurface()
     const dialogLevel = Math.min(substrate + DIALOG_OFFSET, 8)
-    // The size ladder narrows the dialog one notch in compact regions —
-    // width only, the padding stays put (see /docs/sizes).
     const compact = useSize().variant === "compact"
     const [mounted, setMounted] = useState(false)
 
@@ -79,11 +67,6 @@ const DialogContent = forwardRef<HTMLDivElement, DialogContentProps>(
       return () => cancelAnimationFrame(frame)
     }, [open])
 
-    // Fallback release for the deferred unmount: onAnimationComplete on the
-    // panel is the primary signal, but rAF-driven animation callbacks can
-    // stall in throttled/background tabs — leaving an invisible full-screen
-    // overlay (and Radix's scroll lock) in place. Both exit tweens run at
-    // spring.slow.exit, so the fallback tracks that tier.
     useEffect(() => {
       if (open) return
       const id = setTimeout(() => setMounted(false), exitFallbackMs(spring.slow))
@@ -152,8 +135,6 @@ function DialogHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
 }
 
 function DialogFooter({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  // Buttons never shrink or wrap their labels, so a footer too narrow for its actions wraps into
-  // stacked rows here instead of squeezing them.
   return <div className={cn("mt-6 flex flex-wrap justify-end gap-2", className)} {...props} />
 }
 
@@ -161,7 +142,6 @@ const DialogTitle = forwardRef<
   HTMLHeadingElement,
   ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
 >(({ className, ...props }, ref) => {
-  // The title role of the type scale — see /docs/sizes.
   const sizeClasses = useSize()
   return (
     <DialogPrimitive.Title

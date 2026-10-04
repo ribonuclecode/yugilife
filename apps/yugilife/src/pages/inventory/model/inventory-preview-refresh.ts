@@ -16,21 +16,18 @@ import type { PreparedTextures } from "yugilife-core"
 import type { LoadedTemplateBundle } from "yugilife-templates"
 
 export interface InventoryPreviewRefreshProgress {
-  /** The card being rendered right now, or `undefined` between cards and at the boundaries. */
   cardId: string | undefined
   completed: number
   total: number
 }
 
 export interface InventoryPreviewRefreshOptions {
-  /** Fired once a card's new preview is committed, so the gallery can swap that card alone. */
   onCardRendered?: (cardId: string) => void
   onProgress?: (progress: InventoryPreviewRefreshProgress) => void
   signal?: AbortSignal
 }
 
 export interface InventoryPreviewRefreshResult {
-  /** Titles of cards that could not be refreshed. Their stored previews are left untouched. */
   failed: readonly string[]
   updated: number
 }
@@ -44,15 +41,6 @@ interface RefreshTemplate {
   preparedTextures: PreparedTextures | undefined
 }
 
-/**
- * Resolves one template bundle per template identity rather than per card. Loading a bundle fetches
- * every font and image it declares, so a per-card load would repeat that work for the whole
- * inventory — the cost that made the old per-card recovery pipeline unusable at scale.
- *
- * Its prepared textures are resolved on the same boundary and for the same reason: a bulk refresh
- * renders every card in the collection, and grading the frame and effect-box textures once per card
- * would dominate the run.
- */
 function templateLoader(signal: AbortSignal | undefined) {
   const templates = new Map<string, RefreshTemplate>()
   return async function templateFor(templateId: string) {
@@ -77,12 +65,6 @@ async function loadBundle(templateId: string, signal: AbortSignal | undefined) {
   return await getOfficialTemplate(templateId).load(signal ? { signal } : {})
 }
 
-/**
- * Migrates each card to its current template and commits a freshly rendered preview alongside it.
- *
- * A card whose document is already current keeps its revision: re-rendering a thumbnail is not an
- * edit, and bumping the revision would misreport the card as updated today.
- */
 async function refreshOne(
   card: InventoryCard,
   templateFor: (templateId: string) => Promise<RefreshTemplate>,
@@ -102,11 +84,6 @@ async function refreshOne(
   })
 }
 
-/**
- * Re-renders every stored preview against the template each card currently resolves to. This is the
- * explicit, user-initiated counterpart to the automatic refresh that happens when a card is opened
- * in the build editor; nothing re-renders an inventory preview on its own.
- */
 export async function refreshInventoryPreviews(
   options: InventoryPreviewRefreshOptions = {},
 ): Promise<InventoryPreviewRefreshResult> {

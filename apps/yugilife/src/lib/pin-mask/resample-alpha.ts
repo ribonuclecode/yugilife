@@ -1,4 +1,3 @@
-/** Bilinear coverage resampling using pixel centers; accepts alpha planes or an RGBA channel. */
 export function resampleAlpha(
   source: Uint8Array | Uint8ClampedArray,
   sourceWidth: number,

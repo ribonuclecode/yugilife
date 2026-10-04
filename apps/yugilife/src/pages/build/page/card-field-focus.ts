@@ -32,7 +32,6 @@ function focusControl(control: HTMLElement | null) {
   return true
 }
 
-/** Focuses the field's primary editing surface and makes mouse-initiated editor focus visible. */
 export function focusPrimaryCardFieldControl(container: HTMLElement, controlIndex?: number) {
   if (controlIndex !== undefined) {
     return focusControl(

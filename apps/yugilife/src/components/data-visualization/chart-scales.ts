@@ -1,16 +1,7 @@
-/**
- * Pure geometry and formatting for the chart components.
- *
- * None of this touches React or the DOM, which is what makes the parts that are easy to get
- * subtly wrong — tick selection, domain padding, path construction — directly testable.
- */
-
 export interface LinearScale {
-  /** Maps a data value to a pixel position along the axis. */
   (value: number): number
   readonly domain: readonly [number, number]
   readonly range: readonly [number, number]
-  /** Maps a pixel position back to a data value. */
   readonly invert: (position: number) => number
 }
 
@@ -20,8 +11,6 @@ export function linearScale(
 ): LinearScale {
   const [d0, d1] = domain
   const [r0, r1] = range
-  // A zero-width domain would divide by zero; pin it to the middle of the range instead, which is
-  // where a single repeated value belongs.
   const span = d1 - d0
   const scale = ((value: number) =>
     span === 0 ? (r0 + r1) / 2 : r0 + ((value - d0) / span) * (r1 - r0)) as {
@@ -36,10 +25,6 @@ export function linearScale(
   return scale
 }
 
-/**
- * The next round number at or above `value`, from the 1 / 2 / 2.5 / 5 / 10 family, so ticks land
- * on numbers a reader recognises rather than on 1,607.
- */
 export function niceNumber(value: number, round: boolean) {
   if (value === 0) return 0
   const exponent = Math.floor(Math.log10(Math.abs(value)))
@@ -65,17 +50,6 @@ export interface TickedDomain {
   ticks: readonly number[]
 }
 
-/**
- * Rounds a domain outward to clean bounds and returns the ticks inside it.
- *
- * `count` is a target, not a promise: the rounding decides the real spacing, so asking for five
- * ticks over 0–101 gives six at 0/20/40/60/80/100 rather than five at 20.2.
- */
-/**
- * A base-10 scale, for a measure whose interesting range spans more than its absolute size — file
- * size against quality, where a linear axis squashes nearly every setting into its last few
- * percent. On a log axis equal ratios take equal space, which is what is being compared.
- */
 export function logScale(
   domain: readonly [number, number],
   range: readonly [number, number],
@@ -95,16 +69,9 @@ export function logScale(
   return scale
 }
 
-/**
- * Ticks at 1, 2 and 5 in every decade the data crosses. The domain follows the data with a margin
- * rather than rounding out to the next power of ten, which would spend a third of the axis on
- * emptiness.
- */
 export function logTicks(min: number, max: number): TickedDomain {
   if (!(min > 0) || !(max > min) || !Number.isFinite(max))
     return { domain: [1, 10], ticks: [1, 10] }
-  // A domain ending exactly on the outermost points pins them to the frame, where their markers
-  // are half-clipped and their labels have nowhere to go but inward over the plot.
   const pad = (Math.log10(max) - Math.log10(min)) * 0.055
   const domain = [10 ** (Math.log10(min) - pad), 10 ** (Math.log10(max) + pad)] as const
   const candidates: number[] = []
@@ -121,10 +88,6 @@ export function logTicks(min: number, max: number): TickedDomain {
   }
 }
 
-/**
- * Every 1..9 step inside each decade the data crosses, for gridlines rather than labels. Drawn
- * faintly, their crowding towards the top of each decade is what shows the axis compressing.
- */
 export function logMinorTicks(min: number, max: number): readonly number[] {
   if (!(min > 0) || !(max > min) || !Number.isFinite(max)) return []
   const ticks: number[] = []
@@ -158,8 +121,6 @@ export function niceTicks(
   const start = Math.floor(low / step) * step
   const end = Math.ceil(max / step) * step
   const ticks: number[] = []
-  // Accumulating with multiplication rather than repeated addition keeps float drift from turning
-  // a tick that should read "0.3" into "0.30000000000000004".
   const steps = Math.round((end - start) / step)
   for (let index = 0; index <= steps; index += 1) {
     ticks.push(Number((start + index * step).toPrecision(12)))
@@ -167,13 +128,11 @@ export function niceTicks(
   return { domain: [start, end], ticks }
 }
 
-/** An SVG path through the points, in order. Points are already in pixel space. */
 export function linePath(points: readonly (readonly [number, number])[]) {
   if (points.length === 0) return ""
   return points.map(([x, y], index) => `${index === 0 ? "M" : "L"}${round(x)} ${round(y)}`).join("")
 }
 
-/** The same path closed down to `baseline`, for an area wash under a line. */
 export function areaPath(points: readonly (readonly [number, number])[], baseline: number) {
   const first = points.at(0)
   const last = points.at(-1)
@@ -181,10 +140,6 @@ export function areaPath(points: readonly (readonly [number, number])[], baselin
   return `${linePath(points)}L${round(last[0])} ${round(baseline)}L${round(first[0])} ${round(baseline)}Z`
 }
 
-/**
- * A rectangle rounded on one end only: bars round at the data-end and stay square on the baseline,
- * so they read as leaving the axis rather than floating free of it.
- */
 export function barPath(
   x: number,
   y: number,
@@ -195,7 +150,6 @@ export function barPath(
 ) {
   const w = Math.max(0, width)
   const h = Math.max(0, height)
-  // Never round more than half the short side, or the corners meet and invert.
   const r = Math.max(0, Math.min(radius, end === "top" ? Math.min(w / 2, h) : Math.min(h / 2, w)))
   if (r === 0) return `M${round(x)} ${round(y)}h${round(w)}v${round(h)}h${round(-w)}Z`
   if (end === "right") {
@@ -218,7 +172,6 @@ function round(value: number) {
   return Number(value.toFixed(2))
 }
 
-/** Index of the point whose x is closest to `value`. Assumes ascending x. */
 export function nearestIndex(values: readonly number[], value: number) {
   if (values.length === 0) return -1
   let best = 0
@@ -233,10 +186,6 @@ export function nearestIndex(values: readonly number[], value: number) {
   return best
 }
 
-/**
- * Compact notation for large values: 12.9K, 4.2M. For stat tiles and axis ticks, where magnitude
- * matters more than digits; exact values stay available in the table view.
- */
 export function compactNumber(value: number) {
   const magnitude = Math.abs(value)
   if (magnitude >= 1_000_000_000) return `${trim(value / 1_000_000_000)}B`
@@ -245,7 +194,6 @@ export function compactNumber(value: number) {
   return formatNumber(value)
 }
 
-/** Thousands-separated, with at most `fractionDigits` decimals and no trailing zeros. */
 export function formatNumber(value: number, fractionDigits = 2) {
   return value.toLocaleString("en-US", { maximumFractionDigits: fractionDigits })
 }

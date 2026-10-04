@@ -17,7 +17,7 @@ export function childLayers(layer: LayerDefinition): readonly LayerDefinition[] 
   return Array.isArray(layers) ? (layers as readonly LayerDefinition[]) : []
 }
 
-export function isGroupLayer(layer: LayerDefinition): layer is GroupLayer {
+function isGroupLayer(layer: LayerDefinition): layer is GroupLayer {
   return childLayers(layer) !== undefined
 }
 

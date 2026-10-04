@@ -1,10 +1,3 @@
-/**
- * Maps a slider's semantic value range to its visual 0…1 track position.
- *
- * Keeping this contract separate from the slider renderer means a control can make small values
- * easier to tune without duplicating pointer, keyboard, hover, and resize logic. Implementations
- * must be monotonic and return values in the inclusive 0…1 interval.
- */
 export interface SliderScale {
   positionToValue: (position: number, min: number, max: number) => number
   valueToPosition: (value: number, min: number, max: number) => number
@@ -38,8 +31,6 @@ function powerCurveExponents(midpoint: number, midpointPosition: number, min: nu
     return null
   }
 
-  // valuePosition = normalizedValue ** valueToPositionExponent. Solving that curve
-  // at the requested midpoint gives the inverse exponent for positionToValue.
   const valueToPositionExponent =
     Math.log(normalizedMidpointPosition) / Math.log(normalizedMidpoint)
   return {
@@ -48,11 +39,6 @@ function powerCurveExponents(midpoint: number, midpointPosition: number, min: nu
   }
 }
 
-/**
- * Creates a continuous power-curve scale. `midpoint` is the semantic value that should land at
- * `midpointPosition` on the track. For example, pin sizes 4…128 with a midpoint of 32 at 0.5
- * use one smooth concave curve, rather than a visible slope change at 32.
- */
 export function powerSliderScale(midpoint: number, midpointPosition = 0.5): SliderScale {
   return {
     positionToValue(position, min, max) {

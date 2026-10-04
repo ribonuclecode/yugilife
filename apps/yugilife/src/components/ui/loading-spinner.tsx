@@ -14,7 +14,6 @@ const sizeClasses: Record<LoadingSpinnerSize, string> = {
   default: "h-9 w-9",
 }
 
-/** The shared infinite loader used by buttons and inline asynchronous controls. */
 export function LoadingSpinner({ className, size = "default", ...props }: LoadingSpinnerProps) {
   const labelled = props["aria-label"] !== undefined
   return (

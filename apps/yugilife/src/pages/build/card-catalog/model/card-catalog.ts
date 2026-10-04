@@ -1,3 +1,5 @@
+import { isRecord } from "@/lib/utils"
+
 import type { CardData, CardFieldValue } from "yugilife-core"
 
 const catalogSchemaVersion = 2
@@ -67,10 +69,6 @@ export interface CardCatalog {
 
 function failure(message: string): never {
   throw new Error(`Invalid card catalog: ${message}`)
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
 function exactKeys(value: Record<string, unknown>, expected: readonly string[], context: string) {
@@ -375,10 +373,6 @@ function bitCount(value: number) {
   return count
 }
 
-/**
- * Replaces only the artwork pair, preserving every authored text field. Field names stay in this
- * adapter so the catalog UI never needs to know the active template's vocabulary.
- */
 export function cardCatalogArtworkPatch(
   artwork: Blob | "" = "",
 ): Readonly<Record<string, CardFieldValue>> {
@@ -434,5 +428,3 @@ export function cardCatalogEntryPatch(
       : {}),
   }
 }
-
-export { catalogSchemaVersion, displayId }

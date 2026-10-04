@@ -43,18 +43,9 @@ function roundedRectPath(width: number, height: number, radius: number) {
 
 type CursorMode = "default" | "button" | "text" | "drag"
 
-/**
- * The cursor draws in the theme's foreground, which vanishes over a surface that keeps its own
- * colour whatever the theme, such as the support screen's white. Such a surface declares itself
- * with `data-cursor-surface="light"` or `"dark"`, and the cursor switches its own colour scheme to
- * match, so the same `--foreground` token resolves to the ink the design system uses on that kind
- * of surface. Only fixed-colour surfaces need it; everything that follows the theme is already
- * covered.
- */
 const DEFAULT_INK = "var(--foreground, #171717)"
 
 export type CustomCursorProps = {
-  /** CSS selector for elements that provide a typed cursor state. */
   interactiveSelector?: string
   className?: string
 }
@@ -86,12 +77,6 @@ const cursorStyles = `
   }
 `
 
-/**
- * A lightweight, two-layer cursor inspired by the Codrops custom SVG cursor.
- *
- * The ring responds smoothly to pointer movement. Typed interactive elements
- * can expand it, become a text caret, or hide it while dragging.
- */
 export function CustomCursor({
   className,
   interactiveSelector = '[data-cursor], a, button, [role="button"], input, textarea, select, [data-cursor-hover]',
@@ -215,8 +200,6 @@ export function CustomCursor({
       syncCursorMode(event.clientX, event.clientY)
     }
 
-    // Native text selection/dragging can interrupt the pointer event stream in
-    // some browsers. Mousemove keeps the visual cursor alive during that path.
     const onMouseMove = (event: MouseEvent) => {
       const now = performance.now()
       if (
@@ -263,8 +246,6 @@ export function CustomCursor({
     }
 
     const onSelectStart = () => {
-      // Selecting text does not always produce a matching pointerup. Switch
-      // to the caret shape immediately and let mousemove keep it positioned.
       pressed = false
       selectingText = true
       setCursorMode("text")
@@ -272,9 +253,6 @@ export function CustomCursor({
     }
 
     const onDrag = (event: DragEvent) => {
-      // DragEvent coordinates are allowed to be 0,0 when the browser cannot
-      // provide the dragged pointer position. Never send that sentinel to the
-      // cursor or it will jump to the top-left corner.
       if (event.clientX <= 0 && event.clientY <= 0) return
       if (event.clientX < 0 || event.clientY < 0) return
       updatePosition(event.clientX, event.clientY)
@@ -323,7 +301,6 @@ export function CustomCursor({
         : dotRadiusTarget * 2
       const targetDotCornerRadius = textMode ? targetDotWidth / 2 : dotRadiusTarget
 
-      // The position is never eased: any smoothing here is felt as the cursor trailing the hand.
       cursor.style.transform = `translate3d(${target.x - CURSOR_CENTER}px, ${target.y - CURSOR_CENTER}px, 0)`
       cursorOpacity = lerp(cursorOpacity, visible ? 1 : 0, 0.18)
       cursor.style.opacity = String(cursorOpacity)
@@ -372,8 +349,6 @@ export function CustomCursor({
       if (document.visibilityState === "hidden") hideCursor()
     }
 
-    // Slider drags stop propagation in their React handlers. Capture the
-    // pointer stream before it reaches the app so the cursor keeps following.
     window.addEventListener("pointermove", onPointerMove, { capture: true, passive: true })
     window.addEventListener("mousemove", onMouseMove, { capture: true, passive: true })
     window.addEventListener("pointerdown", onPointerDown, { capture: true, passive: true })

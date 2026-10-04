@@ -4,10 +4,10 @@ import os from "node:os"
 import path from "node:path"
 
 import { afterEach, describe, expect, it } from "vitest"
+import { compareTemplateVersions } from "yugilife-core"
 
 import { runCli } from "../src/cli.js"
 import { decodeRasterDataUrl, loadRenderRequest } from "../src/runtime/input.js"
-import { compareTemplateVersions } from "../src/runtime/template-store.js"
 
 const temporaryDirectories: string[] = []
 

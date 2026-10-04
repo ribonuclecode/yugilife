@@ -12,7 +12,6 @@ function renderedTextElements(root: HTMLElement, fields: readonly CardRenderedTe
   })
 }
 
-/** Finds the highest rendered text outline whose browser-computed SVG box contains the pointer. */
 export function renderedTextFieldAt(
   root: HTMLElement,
   fields: readonly CardRenderedTextField[],

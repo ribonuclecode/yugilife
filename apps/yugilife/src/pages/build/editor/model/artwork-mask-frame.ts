@@ -1,6 +1,5 @@
 import type { ArtworkMaskChannel } from "@/lib/pin-mask/artwork-mask-effects"
 
-/** Provenance of a complete effects frame, separate from the current editable mask. */
 export interface ArtworkMaskFrameIdentity {
   artwork: Blob
   source: Blob

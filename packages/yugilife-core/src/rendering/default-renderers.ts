@@ -1,8 +1,10 @@
+import { isAssetSource } from "../asset-source.js"
 import { TextureCache } from "../color-grading.js"
 import { preparedTextureKey } from "../prepared-textures.js"
 import { graphemeCount } from "../rich-text.js"
 
-import { isAssetSource, loadDrawable, throwIfAborted } from "./assets.js"
+import { loadDrawable } from "./assets.js"
+import { throwIfAborted } from "./async-resources.js"
 import { childLayers } from "./layer-tree.js"
 import { acquireScratchCanvas, releaseScratchCanvas } from "./scratch-canvas.js"
 import { createTextElement } from "./vector.js"
@@ -11,7 +13,6 @@ import type {
   ArtworkLayer,
   CanvasLayer,
   ImageLayer,
-  LayerRenderer,
   LayerRendererMap,
   RasterLayer,
   RenderLayerContext,
@@ -39,6 +40,14 @@ function textureCache(source: ConstructorParameters<typeof TextureCache>[0]) {
     textureCaches.set(source, cache)
   }
   return cache
+}
+
+function paint(
+  { context, coverageContext }: Pick<RenderLayerContext, "context" | "coverageContext">,
+  draw: (target: CanvasRenderingContext2D) => void,
+) {
+  draw(context)
+  if (coverageContext) draw(coverageContext)
 }
 
 export function texturePresetKey(name: string, preset: object | undefined) {
@@ -98,76 +107,61 @@ function drawBevel(context: CanvasRenderingContext2D, layer: BevelLayer) {
   const innerTop = y + top
   const innerRight = right - rightEdge
   const innerBottom = bottom - bottomEdge
-  const fillSide = (
-    points: readonly (readonly [number, number])[],
-    fill: string,
-    opacity: number,
-  ) => {
-    const first = points[0]
-    if (!first) return
+  const sides = [
+    {
+      color: "highlight",
+      points: [
+        [x, y],
+        [right, y],
+        [innerRight, innerTop],
+        [innerLeft, innerTop],
+      ],
+    },
+    {
+      color: "highlight",
+      points: [
+        [x, y],
+        [innerLeft, innerTop],
+        [innerLeft, innerBottom],
+        [x, bottom],
+      ],
+    },
+    {
+      color: "shadow",
+      points: [
+        [x, bottom],
+        [right, bottom],
+        [innerRight, innerBottom],
+        [innerLeft, innerBottom],
+      ],
+    },
+    {
+      color: "shadow",
+      points: [
+        [right, y],
+        [right, bottom],
+        [innerRight, innerBottom],
+        [innerRight, innerTop],
+      ],
+    },
+  ] as const
+  context.save()
+  for (const side of sides) {
+    const [first, ...rest] = side.points
     context.beginPath()
     context.moveTo(...first)
-    points.slice(1).forEach((point) => context.lineTo(...point))
+    rest.forEach((point) => context.lineTo(...point))
     context.closePath()
-    context.fillStyle = fill
-    context.globalAlpha = opacity
+    context.fillStyle = color(`${side.color}Color`)
+    context.globalAlpha = opacity(`${side.color}Opacity`)
     context.fill()
   }
-  context.save()
-  fillSide(
-    [
-      [x, y],
-      [right, y],
-      [innerRight, innerTop],
-      [innerLeft, innerTop],
-    ],
-    color("highlightColor"),
-    opacity("highlightOpacity"),
-  )
-  fillSide(
-    [
-      [x, y],
-      [innerLeft, innerTop],
-      [innerLeft, innerBottom],
-      [x, bottom],
-    ],
-    color("highlightColor"),
-    opacity("highlightOpacity"),
-  )
-  fillSide(
-    [
-      [x, bottom],
-      [right, bottom],
-      [innerRight, innerBottom],
-      [innerLeft, innerBottom],
-    ],
-    color("shadowColor"),
-    opacity("shadowOpacity"),
-  )
-  fillSide(
-    [
-      [right, y],
-      [right, bottom],
-      [innerRight, innerBottom],
-      [innerRight, innerTop],
-    ],
-    color("shadowColor"),
-    opacity("shadowOpacity"),
-  )
   context.restore()
 }
 
 async function renderColorTexture(renderContext: RenderLayerContext, layer: RasterLayer) {
-  const {
-    assets,
-    assetSelections,
-    colorPresets,
-    context,
-    coverageContext,
-    preparedTextures,
-    presetOverrides,
-    signal,
-  } = renderContext
+  const { assets, assetSelections, colorPresets, preparedTextures, presetOverrides, signal } =
+    renderContext
   const assetId = assetSelections[layer.id] ?? layer.assetId
   if (!assetId) {
     throw new Error(`Color-texture layer "${layer.id}" requires assetId.`)
@@ -181,13 +175,9 @@ async function renderColorTexture(renderContext: RenderLayerContext, layer: Rast
     throw new Error(`Layer "${layer.id}" requested unknown color preset "${presetName}".`)
   }
   const { x, y, width, height } = layer.region
-  const draw = (processed: CanvasImageSource) => {
-    context.drawImage(processed, x, y, width, height)
-    coverageContext?.drawImage(processed, x, y, width, height)
-  }
+  const draw = (processed: CanvasImageSource) =>
+    paint(renderContext, (target) => target.drawImage(processed, x, y, width, height))
 
-  // A prepared texture already holds the graded pixels, so this layer needs neither the source
-  // asset nor the grading pass.
   if (preparedTextures && presetName) {
     const prepared = await preparedTextures.get(
       preparedTextureKey({
@@ -220,27 +210,26 @@ async function renderColorTexture(renderContext: RenderLayerContext, layer: Rast
 }
 
 export function createDefaultLayerRenderers(): LayerRendererMap {
-  const image: LayerRenderer<ImageLayer> = {
-    output: "raster",
-    async render({ assets, assetSelections, context, coverageContext, signal }, layer) {
-      const assetId = assetSelections[layer.id] ?? layer.assetId
-      const drawable = await loadDrawable(assets.resolve(assetId), signal)
-      const { x, y, width, height } = layer.region
-      context.drawImage(drawable, x, y, width, height)
-      coverageContext?.drawImage(drawable, x, y, width, height)
-      return true
-    },
-  }
   return {
-    image,
+    image: {
+      output: "raster",
+      async render(renderContext, definition) {
+        const layer = definition as ImageLayer
+        const assetId = renderContext.assetSelections[layer.id] ?? layer.assetId
+        const drawable = await loadDrawable(
+          renderContext.assets.resolve(assetId),
+          renderContext.signal,
+        )
+        const { x, y, width, height } = layer.region
+        paint(renderContext, (target) => target.drawImage(drawable, x, y, width, height))
+        return true
+      },
+    },
     "repeated-image": {
       output: "raster",
-      async render(
-        { assets, assetSelections, card, context, coverageContext, signal },
-        definition,
-      ) {
+      async render(renderContext, definition) {
         const layer = definition as RepeatedImageLayer
-        const value = card[layer.field]
+        const value = renderContext.card[layer.field]
         if (value === undefined || value === "") return false
         if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
           throw new Error(
@@ -248,39 +237,34 @@ export function createDefaultLayerRenderers(): LayerRendererMap {
           )
         }
         if (value === 0) return false
-        const assetId = assetSelections[layer.id] ?? layer.assetId
-        const drawable = await loadDrawable(assets.resolve(assetId), signal)
+        const assetId = renderContext.assetSelections[layer.id] ?? layer.assetId
+        const drawable = await loadDrawable(
+          renderContext.assets.resolve(assetId),
+          renderContext.signal,
+        )
         const { x, y, width, height } = layer.region
-        for (let index = 0; index < value; index += 1) {
-          context.drawImage(
-            drawable,
-            x + layer.offset.x * index,
-            y + layer.offset.y * index,
-            width,
-            height,
-          )
-          coverageContext?.drawImage(
-            drawable,
-            x + layer.offset.x * index,
-            y + layer.offset.y * index,
-            width,
-            height,
-          )
-        }
+        paint(renderContext, (target) => {
+          for (let index = 0; index < value; index += 1) {
+            target.drawImage(
+              drawable,
+              x + layer.offset.x * index,
+              y + layer.offset.y * index,
+              width,
+              height,
+            )
+          }
+        })
         return true
       },
     },
     artwork: {
       output: "raster",
-      async render({ card, context, coverageContext, presentation, signal, template }, layer) {
+      async render(renderContext, layer) {
+        const { card, presentation, signal, template } = renderContext
         const artworkLayer = layer as ArtworkLayer
         const transform = presentation.artworkTransforms[
           artworkLayer.transformId ?? artworkLayer.id
-        ] ?? {
-          scale: 1,
-          x: 0,
-          y: 0,
-        }
+        ] ?? { scale: 1, x: 0, y: 0 }
         if (
           artworkLayer.transformMode !== undefined &&
           transform.mode !== artworkLayer.transformMode
@@ -314,8 +298,7 @@ export function createDefaultLayerRenderers(): LayerRendererMap {
         }
 
         if (!artworkLayer.maskField) {
-          drawClipped(context, drawable)
-          if (coverageContext) drawClipped(coverageContext, drawable)
+          paint(renderContext, (target) => drawClipped(target, drawable))
           return true
         }
         const maskSource = card[artworkLayer.maskField]
@@ -327,9 +310,6 @@ export function createDefaultLayerRenderers(): LayerRendererMap {
         }
         const maskDrawable = await loadDrawable(maskSource, signal)
         const { width: cardWidth, height: cardHeight } = template.dimensions
-        // Both surfaces are needed only until the composed result reaches the destination context,
-        // so they are borrowed instead of allocated: this runs on every interactive preview frame.
-        // Only the mask surface is read back, and the readback hint costs drawing speed.
         const masked = acquireScratchCanvas(cardWidth, cardHeight)
         try {
           drawClipped(masked.context, drawable)
@@ -347,8 +327,7 @@ export function createDefaultLayerRenderers(): LayerRendererMap {
           } finally {
             releaseScratchCanvas(mask)
           }
-          context.drawImage(masked.canvas, 0, 0)
-          coverageContext?.drawImage(masked.canvas, 0, 0)
+          paint(renderContext, (target) => target.drawImage(masked.canvas, 0, 0))
         } finally {
           releaseScratchCanvas(masked)
         }
@@ -365,21 +344,17 @@ export function createDefaultLayerRenderers(): LayerRendererMap {
     "color-texture-bevel": {
       output: "raster",
       async render(renderContext, definition) {
-        // Keep the bevel in the same source surface as the texture. A later canvas mask must
-        // multiply their combined alpha once, rather than multiplying two separately masked
-        // layers at a partially covered mask boundary.
+        // One surface for texture and bevel, so a later mask multiplies their alpha once.
         const layer = definition as RasterLayer
         await renderColorTexture(renderContext, layer)
-        drawBevel(renderContext.context, layer)
-        if (renderContext.coverageContext) drawBevel(renderContext.coverageContext, layer)
+        paint(renderContext, (target) => drawBevel(target, layer))
         return true
       },
     },
     bevel: {
       output: "raster",
-      render({ context, coverageContext }, layer) {
-        drawBevel(context, layer as CanvasLayer)
-        if (coverageContext) drawBevel(coverageContext, layer as CanvasLayer)
+      render(renderContext, layer) {
+        paint(renderContext, (target) => drawBevel(target, layer as CanvasLayer))
         return true
       },
     },

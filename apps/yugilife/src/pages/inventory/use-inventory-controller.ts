@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router"
 import { TEMPLATE_CATALOG } from "yugilife-templates"
 
+import { errorMessage } from "@/lib/utils"
+
 import { createInitialEditorDocument } from "../build/editor/model/editor-store"
 
 import { inventoryPreviewMatchesCard } from "./model/inventory-preview"
@@ -20,25 +22,14 @@ import type { InventoryCardSummary } from "./model/inventory-card"
 import type { InventoryPreviewRefreshProgress } from "./model/inventory-preview-refresh"
 
 export interface InventoryPreviewStatus {
-  /** Cards whose preview is missing, or whose document is behind its current template. */
   outdated: number
-  /** The template version outdated cards would be migrated to, when they share one. */
   templateUpgrade: string | undefined
 }
 
-/**
- * The published version of a card's template, or `undefined` when it cannot be known without
- * touching storage. Reading it is free: official descriptors are bundled with the app, and only
- * `load()` fetches assets.
- */
 function publishedTemplateVersion(templateId: string) {
   return TEMPLATE_CATALOG.find(({ id }) => id === templateId)?.version
 }
 
-/**
- * States what the action will do to this collection, rather than describing the mechanism. The
- * counts that matter are how many cards are behind and the template version they would move to.
- */
 export function previewUpdateDescription(total: number, status: InventoryPreviewStatus) {
   if (total === 1) {
     if (status.outdated === 0) {
@@ -59,21 +50,10 @@ export function previewUpdateDescription(total: number, status: InventoryPreview
   return `${status.outdated} of ${total} cards ${verb} a new preview.${upgrade} Every card is re-rendered, which can take a while.`
 }
 
-/** How long a completion message stays before the gallery returns to its resting state. */
 const refreshMessageDurationMs = 3000
-/**
- * Grace period before an object URL is revoked. A card that is crossfading still points at its old
- * URL, and revoking on the spot blanks the image mid-transition. Comfortably longer than the
- * gallery's fade so the handoff is never visible.
- */
+// Outlasts the gallery crossfade so a replaced preview is never blanked mid-transition.
 const previewUrlReleaseDelayMs = 700
 
-/**
- * Inventory is a reader. It never migrates a card and never renders a preview on its own: opening a
- * card in the build editor migrates it and commits its thumbnail, and the explicit refresh action
- * below re-renders the whole collection on request. Anything else would make browsing a collection
- * cost a full template download and a card render per card.
- */
 export function useInventoryController() {
   const navigate = useNavigate()
   const [cards, setCards] = useState<readonly InventoryCardSummary[]>([])
@@ -91,12 +71,6 @@ export function useInventoryController() {
   const liveUrls = useRef<ReadonlySet<string>>(new Set())
   const previewRefreshRequest = useRef<AbortController>(undefined)
 
-  /**
-   * Re-reads the collection. `select` names the card the caller wants left selected, and it is
-   * applied in the same update as the list: a card created by an action is chosen the moment the
-   * list that contains it lands, with no render in between where the previous card is still the
-   * selected one and the gallery has already begun travelling to it.
-   */
   const refresh = useCallback(async (select?: string) => {
     const requestId = ++refreshRequest.current
     const cancelled = () => requestId !== refreshRequest.current
@@ -143,7 +117,7 @@ export function useInventoryController() {
       })
       published = true
     } catch (caught: unknown) {
-      if (!cancelled()) setError(caught instanceof Error ? caught.message : String(caught))
+      if (!cancelled()) setError(errorMessage(caught))
     } finally {
       if (!published) stagedUrls.forEach((url) => URL.revokeObjectURL(url))
       if (!cancelled()) setBusy(false)
@@ -158,11 +132,6 @@ export function useInventoryController() {
     }
   }, [refresh])
 
-  /**
-   * Releasing is deferred and then re-checked against what is currently displayed: a URL that
-   * survived into the next map is still on screen and must not be revoked, which is what lets a
-   * single card's preview be replaced without disturbing the rest.
-   */
   const releasePreviewUrl = useCallback((url: string) => {
     window.setTimeout(() => {
       if (!liveUrls.current.has(url)) URL.revokeObjectURL(url)
@@ -201,7 +170,7 @@ export function useInventoryController() {
       const card = await createInventoryCard(createInitialEditorDocument())
       void navigate(`/build/${encodeURIComponent(card.id)}`)
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : String(caught))
+      setError(errorMessage(caught))
     }
   }
 
@@ -211,7 +180,7 @@ export function useInventoryController() {
       const card = await duplicateInventoryCard(id)
       await refresh(card.id)
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : String(caught))
+      setError(errorMessage(caught))
     }
   }
 
@@ -221,11 +190,10 @@ export function useInventoryController() {
       await deleteInventoryCard(id)
       await refresh()
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : String(caught))
+      setError(errorMessage(caught))
     }
   }
 
-  /** Re-renders every stored preview against the template each card currently resolves to. */
   async function refreshPreviews() {
     if (previewRefreshRequest.current) return
     const controller = new AbortController()
@@ -236,8 +204,6 @@ export function useInventoryController() {
     setPreviewRefresh({ cardId: undefined, completed: 0, total: cards.length })
     try {
       const result = await refreshInventoryPreviews({
-        // Swapping each card as it finishes lets the sweep hand straight over to the new preview,
-        // instead of every card changing at once when the whole run ends.
         onCardRendered: (cardId) => {
           if (!active()) return
           void readInventoryPreview(cardId).then((preview) => {
@@ -264,7 +230,7 @@ export function useInventoryController() {
       await refresh()
     } catch (caught: unknown) {
       if (!active() || controller.signal.aborted) return
-      setError(caught instanceof Error ? caught.message : String(caught))
+      setError(errorMessage(caught))
     } finally {
       if (active()) {
         previewRefreshRequest.current = undefined
@@ -293,7 +259,6 @@ export function useInventoryController() {
     error,
     previewRefresh,
     previewRefreshMessage,
-    /** The card whose preview is being rendered right now, for the gallery's placeholder. */
     renderingCardId: previewRefresh?.cardId,
     previewStatus,
     previewUrls,

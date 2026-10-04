@@ -97,6 +97,66 @@ function usageError(message: string): never {
   throw new CliError("ARGUMENT_ERROR", `${message}\n\n${helpText}`)
 }
 
+async function runTemplatesCommand(
+  [command, ...commandArguments]: readonly string[],
+  registry: string | undefined,
+  signal: AbortSignal,
+  io: CliIo,
+) {
+  if (command === "list") {
+    if (commandArguments.length > 0) usageError("templates list does not accept arguments.")
+    for (const template of await listCliTemplates()) {
+      io.stdout.write(`${template.id}@${template.version}\t${template.source}\t${template.name}\n`)
+    }
+    return
+  }
+  if (command !== "install") usageError("Expected a templates command: list or install.")
+  const [reference] = commandArguments
+  if (commandArguments.length !== 1 || !reference) {
+    usageError("templates install requires exactly one template ID and version.")
+  }
+  const result = await installCliTemplate(reference, {
+    ...(registry === undefined ? {} : { registry }),
+    signal,
+  })
+  io.stdout.write(
+    result.alreadyInstalled
+      ? `${reference} is already available locally.\n`
+      : `Installed ${reference}.\n`,
+  )
+}
+
+async function runRenderCommand(
+  commandArguments: readonly string[],
+  values: ReturnType<typeof parseCliArguments>["values"],
+  signal: AbortSignal,
+  io: CliIo,
+) {
+  const [inputPath] = commandArguments
+  if (commandArguments.length !== 1 || !inputPath) {
+    usageError("render requires exactly one input JSON path.")
+  }
+  const output = asString(values.output)
+  if (!output) usageError("render requires --output <path>.")
+  const warnings = await runRender(inputPath, output, {
+    backgroundColor: asString(values.background),
+    height: numberOption(asString(values.height), "--height"),
+    quality: qualityOption(asString(values.quality)),
+    scale: numberOption(asString(values.scale), "--scale"),
+    signal,
+    templateReference: asString(values.template),
+    textMode: normalizeTextMode(asString(values["text-mode"])),
+    title: asString(values.title),
+    useDefaultTemplate: asBoolean(values["use-default-template"]),
+    width: numberOption(asString(values.width), "--width"),
+  })
+  for (const warning of warnings) {
+    io.stderr.write(
+      `yugilife-cli warning [${warning.code}] ${warning.layerId}: ${warning.message}\n`,
+    )
+  }
+}
+
 async function dispatch(argv: readonly string[], signal: AbortSignal, io: CliIo) {
   const { positionals, values } = parseCliArguments(argv)
   if (asBoolean(values.version)) {
@@ -111,72 +171,17 @@ async function dispatch(argv: readonly string[], signal: AbortSignal, io: CliIo)
   }
 
   const [command, ...commandArguments] = positionals
-  if (command === "doctor") {
-    if (commandArguments.length > 0) usageError("doctor does not accept positional arguments.")
-    io.stdout.write(await runDoctor(signal))
-    return
-  }
-  if (command === "templates") {
-    const [templateCommand, ...templateArguments] = commandArguments
-    if (templateCommand === "list") {
-      if (templateArguments.length > 0) usageError("templates list does not accept arguments.")
-      const installed = await listCliTemplates()
-      installed.forEach((template) =>
-        io.stdout.write(
-          `${template.id}@${template.version}\t${template.source}\t${template.name}\n`,
-        ),
-      )
+  switch (command) {
+    case "doctor":
+      if (commandArguments.length > 0) usageError("doctor does not accept positional arguments.")
+      io.stdout.write(await runDoctor(signal))
       return
-    }
-    if (templateCommand === "install") {
-      if (templateArguments.length !== 1) {
-        usageError("templates install requires exactly one template ID and version.")
-      }
-      const reference = templateArguments[0]!
-      const registry = asString(values.registry)
-      const result = await installCliTemplate(reference, {
-        ...(registry === undefined ? {} : { registry }),
-        signal,
-      })
-      io.stdout.write(
-        result.alreadyInstalled
-          ? `${reference} is already available locally.\n`
-          : `Installed ${reference}.\n`,
-      )
-      return
-    }
-    usageError("Expected a templates command: list or install.")
-  }
-  if (command !== "render") usageError("Expected a command: doctor, render, or templates.")
-  if (commandArguments.length !== 1) usageError("render requires exactly one input JSON path.")
-  const inputPath = commandArguments[0]
-  if (!inputPath) usageError("render requires an input JSON path.")
-  const output = asString(values.output)
-  if (!output) usageError("render requires --output <path>.")
-  const textMode = normalizeTextMode(asString(values["text-mode"]))
-  const title = asString(values.title)
-  const templateReference = asString(values.template)
-  const backgroundColor = asString(values.background)
-  const height = numberOption(asString(values.height), "--height")
-  const quality = qualityOption(asString(values.quality))
-  const scale = numberOption(asString(values.scale), "--scale")
-  const width = numberOption(asString(values.width), "--width")
-  const warnings = await runRender(inputPath, output, {
-    ...(backgroundColor === undefined ? {} : { backgroundColor }),
-    ...(height === undefined ? {} : { height }),
-    ...(quality === undefined ? {} : { quality }),
-    ...(scale === undefined ? {} : { scale }),
-    signal,
-    ...(templateReference === undefined ? {} : { templateReference }),
-    ...(textMode === undefined ? {} : { textMode }),
-    ...(title === undefined ? {} : { title }),
-    useDefaultTemplate: asBoolean(values["use-default-template"]),
-    ...(width === undefined ? {} : { width }),
-  })
-  for (const warning of warnings) {
-    io.stderr.write(
-      `yugilife-cli warning [${warning.code}] ${warning.layerId}: ${warning.message}\n`,
-    )
+    case "templates":
+      return await runTemplatesCommand(commandArguments, asString(values.registry), signal, io)
+    case "render":
+      return await runRenderCommand(commandArguments, values, signal, io)
+    default:
+      usageError("Expected a command: doctor, render, or templates.")
   }
 }
 

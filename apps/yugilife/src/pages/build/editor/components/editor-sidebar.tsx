@@ -12,14 +12,15 @@ import { CardCatalogAutocomplete } from "../../card-catalog/components/card-cata
 import { CatalogArtworkRecovery } from "../../card-catalog/components/catalog-artwork-recovery"
 import { artworkEditorConfig, hasArtworkCrop, resetArtworkCrop } from "../model/editor-config"
 
-import { ArtworkEditor, ArtworkFullArtToggle } from "./artwork-editor"
+import { ArtworkEditor } from "./artwork-editor"
+import { ArtworkFullArtToggle } from "./artwork-transform-controls"
 import { CardFieldInput } from "./card-field-input"
 import { ActiveOverridesList, EditorAdvancedPanel } from "./editor-advanced-panel"
 import { LeadingAuthoredLineFitToggle, TextSizeControl } from "./editor-text-controls"
 
 import type { LoadedCatalogArtworkSet } from "../../card-catalog/components/card-artwork-chooser"
 import type { useBuildController } from "../../page/use-build-controller"
-import type { ArtworkEditorTool } from "./artwork-editor"
+import type { ArtworkEditorTool } from "./artwork-mask-workspace"
 import type { ReactNode } from "react"
 import type { CardFieldValue } from "yugilife-core"
 
@@ -220,9 +221,6 @@ export function EditorSidebar({
             />
           )}
         <CardFieldInput
-          // Full art is a template capability, not a property of the uploaded file: the transform
-          // mode is stored independently of the artwork and now also selects the card title's
-          // style, so the toggle stays available with the drop zone still empty.
           attachedFooter={
             field.name === "artwork" && artworkConfig.supportsFullArt ? (
               <ArtworkFullArtToggle
@@ -353,9 +351,6 @@ export function EditorSidebar({
           </p>
         </div>
 
-        {/* Overrides outlive the switch back to Automatic, so they sit with the switch itself rather
-          than inside the advanced categories: the way out of them must not require turning Advanced
-          mode on again. */}
         {activeOverrides.length > 0 && (
           <div className="border-border border-t pt-4">
             <ActiveOverridesList
@@ -386,10 +381,6 @@ export function EditorSidebar({
         )}
       </section>
 
-      {/* Card data, not presentation, so these sit apart from the advanced categories — and last,
-        since they only matter once the card type stops using them. Always expanded: Build deep-links
-        to a field by switching to Advanced mode and scrolling to it, which a collapsed panel would
-        defeat. */}
       {mode === "advanced" && orderedAdvancedFields.length > 0 && (
         <EditorSection
           description="Automatic mode hides them. Their values stay saved with the card either way."

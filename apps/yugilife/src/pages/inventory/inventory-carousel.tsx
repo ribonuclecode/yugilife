@@ -22,7 +22,6 @@ import { cardRenderingLoopMs, CardRenderingSkeleton } from "./card-rendering-ske
 import type { InventoryCardSummary } from "./model/inventory-card"
 import type { MotionValue, PanInfo } from "framer-motion"
 
-/** The face fades out first and the sweep follows it in; on the way out the sweep clears first. */
 const stageDelay = 0.1
 
 function updatedOn(timestamp: number) {
@@ -33,19 +32,10 @@ function updatedOn(timestamp: number) {
   })
 }
 
-/**
- * Holds a flag true long enough for the sweep to finish a full pass.
- *
- * A card can finish rendering in a couple of hundred milliseconds, which would tear the animation
- * down mid-wave. The work is never delayed by this — only the card's own face waits, so a bulk
- * refresh keeps running underneath and several cards can be mid-sweep at once.
- */
 function useHeldFlag(active: boolean, minimumMs: number) {
   const [held, setHeld] = useState(false)
   const startedAt = useRef(0)
 
-  // Both transitions are raised from a callback rather than synchronously in the effect body, so
-  // neither cascades a render — the same shape the tooltip uses for its deferred unmount.
   useEffect(() => {
     if (!active) return
     startedAt.current = Date.now()
@@ -70,7 +60,6 @@ interface InventoryCarouselProps {
   onDuplicate: (cardId: string) => void
   onSelect: (cardId: string) => void
   previewUrls: Readonly<Record<string, string>>
-  /** The card whose preview is being re-rendered, shown as a skeleton until it lands. */
   renderingCardId?: string | undefined
   selectedCardId?: string | undefined
 }
@@ -164,9 +153,6 @@ function PositionedCard({
         >
           {String(index + 1).padStart(2, "0")}
         </span>
-        {/* The card's own actions ride with it, opposite its number. Only the settled card offers
-            them: every other card is turned away and partly behind its neighbour, so a control
-            there would be aimed at a target the reader cannot fully see. */}
         <AnimatePresence>
           {selected && (
             <motion.div
@@ -179,8 +165,6 @@ function PositionedCard({
               initial={{ opacity: 0 }}
               key="actions"
               transition={fade}
-              // A drag that happens to start on a control still ends in a click on it. The card face
-              // already ignores that; these do too, or a flick of the gallery opens the editor.
               onClickCapture={(event) => {
                 if (!suppressClick()) return
                 event.preventDefault()
@@ -255,8 +239,6 @@ function PositionedCard({
           }}
           type="button"
         >
-          {/* The card's surface travels with its face: both clear out of the sweep's way together,
-              so the tiles never sit inside a leftover bordered box. */}
           <motion.span
             animate={{ opacity: redrawing ? 0 : 1 }}
             aria-hidden="true"
@@ -267,8 +249,6 @@ function PositionedCard({
             initial={false}
             transition={redrawing ? fade : { ...fade, delay: stageDelay }}
           />
-          {/* The face stays mounted and only fades while a render is running, so the sweep is an
-              overlay on this card rather than a third thing swapping in and out of its place. */}
           <AnimatePresence initial={false}>
             {previewUrl ? (
               <motion.img
@@ -393,14 +373,6 @@ export function InventoryCarousel({
     [progress, settleTo],
   )
 
-  /**
-   * Follows a selection made outside the carousel — a duplicate, a delete, the first card after a
-   * reload. When the selection changed because this carousel just settled there, it is a no-op.
-   *
-   * This is why the carousel is not keyed on the selected card upstream: remounting to re-seed the
-   * scroll position would also tear down every card's own state, restarting in-flight animations
-   * the moment a drag settles.
-   */
   useEffect(() => {
     if (selectedIndex === settledIndex) return
     // Deferred a frame because settling updates state; running it inline would cascade a render.

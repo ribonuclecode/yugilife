@@ -1,10 +1,13 @@
+import { isTemplateVersion } from "yugilife-core"
+
+import { requestResult } from "@/lib/indexed-db"
+
 import {
   editorDefaultLayerVisibility,
   editorPresetTargets,
 } from "../../build/editor/model/editor-config"
 import { createInitialEditorDocument } from "../../build/editor/model/editor-store"
 import { migrateEditorDocumentSchema } from "../../build/migrations/document"
-import { isTemplateVersion } from "../../build/migrations/template"
 
 import type { EditorDocumentState } from "../../build/editor/model/editor-document"
 
@@ -18,17 +21,6 @@ interface LegacyRecord {
     state: unknown
     version: number
   }
-}
-
-function requestResult<T>(request: IDBRequest<T>) {
-  return new Promise<T>((resolve, reject) => {
-    request.addEventListener("success", () => resolve(request.result), { once: true })
-    request.addEventListener(
-      "error",
-      () => reject(request.error ?? new Error("Legacy editor storage request failed")),
-      { once: true },
-    )
-  })
 }
 
 async function openLegacyDatabase() {

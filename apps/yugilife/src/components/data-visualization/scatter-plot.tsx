@@ -18,28 +18,20 @@ import {
 import type { ChartGoal, ChartQuadrants } from "./chart-frame"
 import type { ReactNode } from "react"
 
-export interface ScatterPoint {
+interface ScatterPoint {
   readonly id: string
   readonly label: string
   readonly x: number
   readonly y: number
-  /** Direct-labelled in the plot. Label selectively: a name on every dot is unreadable. */
   readonly emphasis?: boolean
 }
 
-/**
- * A case that belongs to the experiment but produced no measurement. It cannot be plotted, and
- * dropping it would quietly shrink the experiment to the runs that worked, so the table lists it
- * with the reason in place of its numbers.
- */
-export interface ScatterAbsent {
+interface ScatterAbsent {
   readonly label: string
-  /** What stands in for the measurements, e.g. "fail". */
   readonly note: string
 }
 
-export interface ScatterBand {
-  /** Inclusive y range the band covers, in data units. */
+interface ScatterBand {
   readonly from: number
   readonly to: number
   readonly label: string
@@ -48,34 +40,23 @@ export interface ScatterBand {
 export interface ScatterPlotProps {
   readonly title: string
   readonly description?: ReactNode
-  /** Which direction on this chart is the good one. */
   readonly goal?: ChartGoal
   readonly points: readonly ScatterPoint[]
   readonly xLabel: string
   readonly yLabel: string
   readonly formatX?: (value: number) => string
   readonly formatY?: (value: number) => string
-  /** Horizontal thresholds drawn behind the marks — verdict bands, budgets, limits. */
   readonly bands?: readonly ScatterBand[]
-  /** A vertical budget line, e.g. the size a download has to fit under. */
   readonly xTarget?: { readonly value: number; readonly label: string }
-  /** Splits the plot into four and shades the corner a point would have to reach to be a win. */
   readonly quadrants?: ChartQuadrants
-  /** Cases with no measurement. They reach the table view only, never the plot. */
   readonly absent?: readonly ScatterAbsent[]
   readonly footnote?: ReactNode
   readonly height?: number
 }
 
-// The top inset has to clear the budget-line label, which is drawn above the plot.
 const PADDING = { bottom: 46, left: 78, right: 18, top: 30 }
 const HIT_RADIUS = 16
 
-/**
- * A scatter plot for a two-measure trade-off. Every mark wears the accent: any two points can end
- * up side by side, a harder colour-separation test than a bar chart, so one cloud takes one colour
- * and direct-labels the points that matter.
- */
 export function ScatterPlot({
   absent = [],
   bands = [],
@@ -106,8 +87,6 @@ export function ScatterPlot({
       goal={goal}
       rows={[
         ...points.map((point) => [point.label, formatX(point.x), formatY(point.y)]),
-        // The note fills both measure columns: neither was produced, and blanking them would read
-        // as zero rather than as nothing.
         ...absent.map((entry) => [entry.label, entry.note, entry.note]),
       ]}
       title={title}
@@ -179,8 +158,6 @@ function ScatterCanvas({
   const x = linearScale(xDomain.domain, [plotLeft, plotRight])
   const y = linearScale(yDomain.domain, [plotBottom, PADDING.top])
 
-  // Nearest-point picking: an 8px dot is a pinpoint nobody hits reliably, so the pointer only has
-  // to be closest rather than dead centre. `currentTarget` is the <svg>, so no ref is needed.
   function handleMove(event: { clientX: number; clientY: number; currentTarget: SVGSVGElement }) {
     const bounds = event.currentTarget.getBoundingClientRect()
     const pointerX = event.clientX - bounds.left
@@ -224,7 +201,6 @@ function ScatterCanvas({
 
         {bands.map((band) => (
           <g key={band.label}>
-            {/* Kept faint: a band is the backdrop a reading is judged against, not a mark. */}
             <rect
               fill="var(--chart-grid)"
               opacity={0.55}
@@ -233,7 +209,6 @@ function ScatterCanvas({
               x={plotLeft}
               y={Math.min(y(band.from), y(band.to))}
             />
-            {/* Band labels hug the right edge; point labels lean left, so the two never meet. */}
             <text
               className={cn(FIGURE_TYPE.axis, "fill-muted-foreground")}
               dominantBaseline="hanging"
@@ -271,7 +246,6 @@ function ScatterCanvas({
           <text
             className={cn(FIGURE_TYPE.axis, "fill-muted-foreground tabular-nums")}
             key={`x-${tick}`}
-            // The end ticks anchor inward so neither runs off the edge of the chart.
             textAnchor={
               index === 0 ? "start" : index === xDomain.ticks.length - 1 ? "end" : "middle"
             }
@@ -289,8 +263,6 @@ function ScatterCanvas({
         >
           {xLabel}
         </text>
-        {/* Both axes are named: a reader landing on the figure mid-article cannot tell what a bare
-            number on an axis measures. */}
         <text
           className={cn(FIGURE_TYPE.label, "fill-muted-foreground")}
           textAnchor="middle"
@@ -327,7 +299,6 @@ function ScatterCanvas({
           const isActive = point.id === activeId
           return (
             <g key={point.id}>
-              {/* Points arrive one after another, tracing the trade-off in reading order. */}
               <motion.circle
                 animate={{
                   opacity:
@@ -338,8 +309,6 @@ function ScatterCanvas({
                 cy={y(point.y)}
                 fill={CHART_ACCENT}
                 initial={false}
-                // The static radius is the finished one; the animation reaches down to zero and
-                // back, so a dot that never animates is still a drawn dot.
                 r={isActive ? 7 : 5.5}
                 stroke="var(--background)"
                 strokeWidth={2}
