@@ -37,6 +37,7 @@
     "check:generated": "pnpm --recursive --stream --if-present check:generated",
     "build": "pnpm --recursive --stream --if-present build",
     "build:pages": "pnpm --filter yugilife build:pages",
+    "pack:local": "pnpm --filter \"./packages/*\" build && pnpm --filter \"./packages/*\" pack --pack-destination packed",
     "typecheck": "pnpm --recursive --stream --if-present typecheck",
     "test": "pnpm test:scripts && pnpm --recursive --stream --if-present test",
     "test:scripts": "node --test ./scripts/*.test.mjs",

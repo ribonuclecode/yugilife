@@ -66,6 +66,29 @@ pnpm dev
 `pnpm check` runs the full verification (lint, types, unit, and browser tests); it needs the test
 browsers from `pnpm setup:browsers` first.
 
+### Use the packages from another project
+
+`pnpm pack:local` builds `yugilife-core`, `yugilife-templates`, and `yugilife-cli` and packs them
+into `packed/`. Install all three tarballs together, since the CLI depends on the other two by
+version:
+
+```bash
+npm install ../yugilife/packed/yugilife-core-0.0.0.tgz \
+  ../yugilife/packed/yugilife-templates-0.1.0.tgz ../yugilife/packed/yugilife-cli-0.1.0.tgz
+```
+
+pnpm resolves the CLI's dependencies from the registry, so point them at the tarballs in the
+consumer's `pnpm-workspace.yaml`, then `pnpm add ../yugilife/packed/yugilife-cli-0.1.0.tgz` and
+allow `@playwright/browser-chromium` to download Chromium with `pnpm approve-builds`:
+
+```yaml
+overrides:
+  yugilife-core: file:../yugilife/packed/yugilife-core-0.0.0.tgz
+  yugilife-templates: file:../yugilife/packed/yugilife-templates-0.1.0.tgz
+```
+
+Rerun `pnpm pack:local` and reinstall after changing the packages.
+
 ## License
 
 [AGPL-3.0](apps/yugilife/LICENSE). Yu-Gi-Oh! is a trademark of Konami. Yugilife is a fan project and is
