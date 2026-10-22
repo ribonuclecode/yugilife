@@ -1,0 +1,1512 @@
+{
+  "schemaVersion": 1,
+  "dimensions": {
+    "width": 813,
+    "height": 1185
+  },
+  "fonts": {
+    "DFP-ReiSho-W6": "font.dfp-reisho-w6-jajwa",
+    "StoneSerifStd-Bold": "font.itc-stone-serif-std-bold",
+    "StoneSerifITCTTBold-ArtificialSC": "font.stone-serif-itc-tt-sc-bold",
+    "MatrixRegularSmallCaps": "font.matrix-regular-small-caps",
+    "MatrixBoldSmallCaps": "font.matrix-bold-small-caps",
+    "MatrixBook": "font.matrix-book",
+    "ITCStoneSerifMedium": "font.itc-stone-serif-medium"
+  },
+  "textDefaults": {
+    "autoScaleXQuantifier": 0.01,
+    "maxAutoCompressionX": 0.2
+  },
+  "fitProfileSets": {
+    "description": [
+      {
+        "id": "large",
+        "label": "Large",
+        "fontSize": 30,
+        "lineHeight": 30,
+        "maxLines": 5
+      },
+      {
+        "id": "medium",
+        "label": "Medium",
+        "fontSize": 24.4,
+        "lineHeight": 25,
+        "maxLines": 6
+      },
+      {
+        "id": "small",
+        "label": "Small",
+        "fontSize": 21,
+        "lineHeight": 22,
+        "maxLines": 7
+      },
+      {
+        "id": "extra-small",
+        "label": "Extra Small",
+        "fontSize": 17,
+        "lineHeight": 16.67,
+        "maxLines": 9
+      }
+    ],
+    "type-line": [
+      {
+        "id": "type-big",
+        "label": "Type big",
+        "fontSize": 31
+      },
+      {
+        "id": "type-small",
+        "label": "Type small",
+        "fontSize": 24
+      }
+    ]
+  },
+  "cardFields": [
+    {
+      "name": "name",
+      "kind": "text",
+      "label": "Name",
+      "maxLength": 80,
+      "defaultValue": "Magician Of Chaos"
+    },
+    {
+      "name": "cardVariant",
+      "kind": "text",
+      "label": "Card type",
+      "required": true,
+      "options": [
+        "normal",
+        "effect",
+        "ritual",
+        "fusion",
+        "ultimatch",
+        "transformation",
+        "god",
+        "spell",
+        "trap"
+      ],
+      "defaultValue": "effect"
+    },
+    {
+      "name": "attribute",
+      "kind": "text",
+      "label": "Attribute",
+      "automaticWhen": {
+        "path": "kind",
+        "equals": "monster"
+      },
+      "options": ["DARK", "LIGHT", "EARTH", "WATER", "FIRE", "WIND", "DIVINE"],
+      "defaultValue": "DARK"
+    },
+    {
+      "name": "spellTrapType",
+      "kind": "text",
+      "label": "Spell/Trap type",
+      "automaticWhen": [
+        {
+          "path": "kind",
+          "equals": "spell"
+        },
+        {
+          "path": "kind",
+          "equals": "trap"
+        }
+      ],
+      "options": ["normal", "continuous", "counter", "equip", "field", "quick-play", "ritual"],
+      "defaultValue": "normal"
+    },
+    {
+      "name": "level",
+      "kind": "number",
+      "label": "Level",
+      "automaticWhen": {
+        "path": "kind",
+        "equals": "monster"
+      },
+      "min": 1,
+      "max": 12,
+      "defaultValue": 7
+    },
+    {
+      "name": "types",
+      "kind": "text-list",
+      "label": "Type line",
+      "maxItems": 4,
+      "defaultValue": ["Spellcaster", "Ritual", "Effect"]
+    },
+    {
+      "name": "description",
+      "kind": "multiline",
+      "label": "Effect text",
+      "automaticFitLayer": "description",
+      "maxItems": 10,
+      "defaultValue": "<b>1.</b> This card's name becomes \"Dark Magician\" while on the field or in the GY.\n<b>2.</b> (Quick, 1/Turn) When a Spell/Trap is activated, you can: [Target 1 card on the field] Destroy it."
+    },
+    {
+      "name": "attack",
+      "kind": "text",
+      "label": "ATK",
+      "automaticWhen": {
+        "path": "kind",
+        "equals": "monster"
+      },
+      "defaultValue": "2500"
+    },
+    {
+      "name": "defense",
+      "kind": "text",
+      "label": "DEF",
+      "automaticWhen": {
+        "path": "kind",
+        "equals": "monster"
+      },
+      "defaultValue": "2100"
+    },
+    {
+      "name": "era",
+      "kind": "number",
+      "label": "Era",
+      "min": 1,
+      "max": 99,
+      "defaultValue": 1
+    },
+    {
+      "name": "effectGroup",
+      "kind": "text",
+      "label": "Effect group",
+      "maxLength": 24,
+      "defaultValue": "X-DESTROY CARDS"
+    },
+    {
+      "name": "aether",
+      "kind": "boolean",
+      "label": "Aether card",
+      "defaultValue": false
+    },
+    {
+      "name": "signatureMove",
+      "kind": "boolean",
+      "label": "Has Signature Move",
+      "defaultValue": false
+    },
+    {
+      "name": "setId",
+      "kind": "text",
+      "label": "Set ID",
+      "maxLength": 16,
+      "defaultValue": "DM01-001"
+    },
+    {
+      "name": "artwork",
+      "kind": "image",
+      "label": "Artwork"
+    },
+    {
+      "name": "artworkOverlay",
+      "kind": "image",
+      "label": "Artwork alpha mask",
+      "advancedOnly": true
+    }
+  ],
+  "semanticBindings": {
+    "bindings": [
+      {
+        "path": "kind",
+        "source": {
+          "field": "cardVariant"
+        },
+        "transform": {
+          "kind": "lookup",
+          "values": {
+            "normal": "monster",
+            "effect": "monster",
+            "ritual": "monster",
+            "fusion": "monster",
+            "ultimatch": "monster",
+            "transformation": "monster",
+            "god": "monster",
+            "spell": "spell",
+            "trap": "trap"
+          }
+        }
+      },
+      {
+        "path": "monster.frame",
+        "source": {
+          "field": "cardVariant"
+        },
+        "transform": {
+          "kind": "lookup",
+          "values": {
+            "normal": "normal",
+            "effect": "effect",
+            "ritual": "ritual",
+            "fusion": "fusion",
+            "ultimatch": "ultimatch",
+            "transformation": "transformation",
+            "god": "god"
+          }
+        },
+        "when": {
+          "path": "kind",
+          "equals": "monster"
+        }
+      },
+      {
+        "path": "monster.attribute",
+        "source": {
+          "field": "attribute"
+        },
+        "when": {
+          "path": "kind",
+          "equals": "monster"
+        }
+      },
+      {
+        "path": "monster.attributeGlyph",
+        "source": {
+          "field": "attribute"
+        },
+        "transform": {
+          "kind": "lookup",
+          "values": {
+            "DARK": "闇",
+            "LIGHT": "光",
+            "EARTH": "地",
+            "WATER": "水",
+            "FIRE": "炎",
+            "WIND": "風",
+            "DIVINE": "神"
+          }
+        },
+        "when": {
+          "path": "kind",
+          "equals": "monster"
+        }
+      },
+      {
+        "path": "monster.levelLabel",
+        "source": {
+          "value": "LEVEL"
+        },
+        "when": {
+          "path": "kind",
+          "equals": "monster"
+        }
+      },
+      {
+        "path": "monster.atkLabel",
+        "source": {
+          "value": "ATK"
+        },
+        "when": {
+          "path": "kind",
+          "equals": "monster"
+        }
+      },
+      {
+        "path": "monster.defLabel",
+        "source": {
+          "value": "DEF"
+        },
+        "when": {
+          "path": "kind",
+          "equals": "monster"
+        }
+      },
+      {
+        "path": "spellTrap.type",
+        "source": {
+          "field": "spellTrapType"
+        },
+        "when": {
+          "path": "kind",
+          "in": ["spell", "trap"]
+        }
+      },
+      {
+        "path": "aether",
+        "source": {
+          "field": "aether"
+        },
+        "fallback": {
+          "kind": "value",
+          "value": false
+        }
+      },
+      {
+        "path": "aether.glyph",
+        "source": {
+          "value": "Æ"
+        },
+        "when": {
+          "path": "aether",
+          "equals": true
+        }
+      },
+      {
+        "path": "signatureMove",
+        "source": {
+          "field": "signatureMove"
+        },
+        "fallback": {
+          "kind": "value",
+          "value": false
+        }
+      }
+    ]
+  },
+  "layers": [
+    {
+      "id": "cardBackground",
+      "kind": "svg",
+      "label": "White card background",
+      "group": "Background",
+      "editorVisible": false,
+      "element": {
+        "tag": "rect",
+        "attributes": {
+          "x": 0,
+          "y": 0,
+          "width": 813,
+          "height": 1185,
+          "fill": "#ffffff"
+        }
+      }
+    },
+    {
+      "id": "border",
+      "kind": "image",
+      "label": "Border",
+      "group": "Artwork and frames",
+      "assetId": "card.dynamis-duel.border",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 813,
+        "height": 1185
+      }
+    },
+    {
+      "id": "frameTexture",
+      "kind": "raster",
+      "label": "Frame texture",
+      "group": "Artwork and frames",
+      "renderer": "color-texture",
+      "assetId": "card.dynamis-duel.frame-texture",
+      "region": {
+        "x": 28,
+        "y": 28,
+        "width": 757,
+        "height": 1128
+      },
+      "presetTarget": "frame",
+      "defaultPreset": "dynamis-effect-frame"
+    },
+    {
+      "id": "nameBar",
+      "kind": "svg",
+      "label": "Name bar",
+      "group": "Artwork and frames",
+      "element": {
+        "tag": "rect",
+        "attributes": {
+          "x": 45,
+          "y": 45,
+          "width": 620,
+          "height": 72,
+          "rx": 6,
+          "fill": "#f3ecd8",
+          "stroke": "#2a2a2a",
+          "stroke-width": 2
+        }
+      }
+    },
+    {
+      "id": "name",
+      "kind": "text",
+      "label": "Name",
+      "group": "Card text",
+      "field": "name",
+      "semanticStyles": [
+        {
+          "id": "fullArt",
+          "label": "Full-art card title",
+          "whenTransforms": {
+            "artwork": "full-art"
+          },
+          "typography": {
+            "fill": "#ffffff",
+            "stroke": {
+              "color": "#111111",
+              "width": 1.5,
+              "align": "outer",
+              "linejoin": "round"
+            }
+          }
+        }
+      ],
+      "position": {
+        "x": 60,
+        "y": 97
+      },
+      "typography": {
+        "fill": "#111111",
+        "fontFamily": "MatrixRegularSmallCaps",
+        "fontSize": 60,
+        "fit": "scale-x",
+        "maxWidth": 596
+      }
+    },
+    {
+      "id": "artwork",
+      "kind": "artwork",
+      "label": "Artwork",
+      "group": "Artwork and frames",
+      "field": "artwork",
+      "transformId": "artwork",
+      "region": {
+        "x": 42,
+        "y": 124,
+        "width": 729,
+        "height": 700
+      }
+    },
+    {
+      "id": "attributeBadge",
+      "kind": "group",
+      "label": "Attribute badge",
+      "group": "Card symbols",
+      "layers": [
+        {
+          "id": "attributePlateDark",
+          "kind": "svg",
+          "label": "Dark attribute plate",
+          "group": "Card symbols",
+          "defaultVisible": false,
+          "element": {
+            "tag": "rect",
+            "attributes": {
+              "x": 676,
+              "y": 42,
+              "width": 92,
+              "height": 92,
+              "rx": 14,
+              "fill": "#4a2a7a",
+              "stroke": "#111111",
+              "stroke-width": 2
+            }
+          }
+        },
+        {
+          "id": "attributePlateLight",
+          "kind": "svg",
+          "label": "Light attribute plate",
+          "group": "Card symbols",
+          "defaultVisible": false,
+          "element": {
+            "tag": "rect",
+            "attributes": {
+              "x": 676,
+              "y": 42,
+              "width": 92,
+              "height": 92,
+              "rx": 14,
+              "fill": "#b8860b",
+              "stroke": "#111111",
+              "stroke-width": 2
+            }
+          }
+        },
+        {
+          "id": "attributePlateEarth",
+          "kind": "svg",
+          "label": "Earth attribute plate",
+          "group": "Card symbols",
+          "defaultVisible": false,
+          "element": {
+            "tag": "rect",
+            "attributes": {
+              "x": 676,
+              "y": 42,
+              "width": 92,
+              "height": 92,
+              "rx": 14,
+              "fill": "#6b4a2a",
+              "stroke": "#111111",
+              "stroke-width": 2
+            }
+          }
+        },
+        {
+          "id": "attributePlateWater",
+          "kind": "svg",
+          "label": "Water attribute plate",
+          "group": "Card symbols",
+          "defaultVisible": false,
+          "element": {
+            "tag": "rect",
+            "attributes": {
+              "x": 676,
+              "y": 42,
+              "width": 92,
+              "height": 92,
+              "rx": 14,
+              "fill": "#1565c0",
+              "stroke": "#111111",
+              "stroke-width": 2
+            }
+          }
+        },
+        {
+          "id": "attributePlateFire",
+          "kind": "svg",
+          "label": "Fire attribute plate",
+          "group": "Card symbols",
+          "defaultVisible": false,
+          "element": {
+            "tag": "rect",
+            "attributes": {
+              "x": 676,
+              "y": 42,
+              "width": 92,
+              "height": 92,
+              "rx": 14,
+              "fill": "#c62828",
+              "stroke": "#111111",
+              "stroke-width": 2
+            }
+          }
+        },
+        {
+          "id": "attributePlateWind",
+          "kind": "svg",
+          "label": "Wind attribute plate",
+          "group": "Card symbols",
+          "defaultVisible": false,
+          "element": {
+            "tag": "rect",
+            "attributes": {
+              "x": 676,
+              "y": 42,
+              "width": 92,
+              "height": 92,
+              "rx": 14,
+              "fill": "#2e7d32",
+              "stroke": "#111111",
+              "stroke-width": 2
+            }
+          }
+        },
+        {
+          "id": "attributePlateDivine",
+          "kind": "svg",
+          "label": "Divine attribute plate",
+          "group": "Card symbols",
+          "defaultVisible": false,
+          "element": {
+            "tag": "rect",
+            "attributes": {
+              "x": 676,
+              "y": 42,
+              "width": 92,
+              "height": 92,
+              "rx": 14,
+              "fill": "#8d6e00",
+              "stroke": "#111111",
+              "stroke-width": 2
+            }
+          }
+        },
+        {
+          "id": "attributePlateSpell",
+          "kind": "svg",
+          "label": "Spell attribute plate",
+          "group": "Card symbols",
+          "defaultVisible": false,
+          "element": {
+            "tag": "rect",
+            "attributes": {
+              "x": 676,
+              "y": 42,
+              "width": 92,
+              "height": 92,
+              "rx": 14,
+              "fill": "#0f8a8a",
+              "stroke": "#111111",
+              "stroke-width": 2
+            }
+          }
+        },
+        {
+          "id": "attributePlateTrap",
+          "kind": "svg",
+          "label": "Trap attribute plate",
+          "group": "Card symbols",
+          "defaultVisible": false,
+          "element": {
+            "tag": "rect",
+            "attributes": {
+              "x": 676,
+              "y": 42,
+              "width": 92,
+              "height": 92,
+              "rx": 14,
+              "fill": "#ad1457",
+              "stroke": "#111111",
+              "stroke-width": 2
+            }
+          }
+        },
+        {
+          "id": "attribute",
+          "kind": "text",
+          "label": "Attribute top label",
+          "group": "Card symbols",
+          "semanticPath": "monster.attribute",
+          "defaultVisible": false,
+          "position": {
+            "x": 722,
+            "y": 70
+          },
+          "typography": {
+            "fill": "#ffffff",
+            "fontFamily": "StoneSerifStd-Bold",
+            "fontSize": 15,
+            "textAnchor": "middle"
+          }
+        },
+        {
+          "id": "attributeGlyph",
+          "kind": "text",
+          "label": "Attribute glyph",
+          "group": "Card symbols",
+          "semanticPath": "monster.attributeGlyph",
+          "defaultVisible": false,
+          "position": {
+            "x": 722,
+            "y": 124
+          },
+          "typography": {
+            "fill": "#ffffff",
+            "fontFamily": "DFP-ReiSho-W6",
+            "fontSize": 56,
+            "fontWeight": 400,
+            "textAnchor": "middle"
+          }
+        }
+      ]
+    },
+    {
+      "id": "typeStrip",
+      "kind": "svg",
+      "label": "Type line strip",
+      "group": "Artwork and frames",
+      "element": {
+        "tag": "rect",
+        "attributes": {
+          "x": 118,
+          "y": 792,
+          "width": 652,
+          "height": 42,
+          "rx": 4,
+          "fill": "#f3ecd8",
+          "stroke": "#2a2a2a",
+          "stroke-width": 1.5
+        }
+      }
+    },
+    {
+      "id": "levelPlate",
+      "kind": "svg",
+      "label": "Level badge",
+      "group": "Card symbols",
+      "defaultVisible": false,
+      "element": {
+        "tag": "circle",
+        "attributes": {
+          "cx": 96,
+          "cy": 813,
+          "r": 54,
+          "fill": "#d8431d",
+          "stroke": "#6e1a08",
+          "stroke-width": 3
+        }
+      }
+    },
+    {
+      "id": "levelLabel",
+      "kind": "text",
+      "label": "Level label",
+      "group": "Card symbols",
+      "semanticPath": "monster.levelLabel",
+      "defaultVisible": false,
+      "position": {
+        "x": 96,
+        "y": 792
+      },
+      "typography": {
+        "fill": "#ffffff",
+        "fontFamily": "StoneSerifStd-Bold",
+        "fontSize": 14,
+        "textAnchor": "middle"
+      }
+    },
+    {
+      "id": "level",
+      "kind": "text",
+      "label": "Level number",
+      "group": "Card symbols",
+      "field": "level",
+      "defaultVisible": false,
+      "position": {
+        "x": 96,
+        "y": 846
+      },
+      "typography": {
+        "fill": "#ffffff",
+        "fontFamily": "MatrixBoldSmallCaps",
+        "fontSize": 56,
+        "textAnchor": "middle"
+      }
+    },
+    {
+      "id": "spellTrapIconPlate",
+      "kind": "svg",
+      "label": "Spell/Trap icon plate",
+      "group": "Card symbols",
+      "defaultVisible": false,
+      "element": {
+        "tag": "circle",
+        "attributes": {
+          "cx": 96,
+          "cy": 813,
+          "r": 54,
+          "fill": "#f3ecd8",
+          "stroke": "#2a2a2a",
+          "stroke-width": 3
+        }
+      }
+    },
+    {
+      "id": "spellTrapIconContinuous",
+      "kind": "image",
+      "label": "Continuous icon",
+      "group": "Card symbols",
+      "assetId": "card.dynamis-duel.spell-trap.icon.continuous",
+      "defaultVisible": false,
+      "region": {
+        "x": 62,
+        "y": 779,
+        "width": 68,
+        "height": 68
+      }
+    },
+    {
+      "id": "spellTrapIconCounter",
+      "kind": "image",
+      "label": "Counter icon",
+      "group": "Card symbols",
+      "assetId": "card.dynamis-duel.spell-trap.icon.counter",
+      "defaultVisible": false,
+      "region": {
+        "x": 62,
+        "y": 779,
+        "width": 68,
+        "height": 68
+      }
+    },
+    {
+      "id": "spellTrapIconEquip",
+      "kind": "image",
+      "label": "Equip icon",
+      "group": "Card symbols",
+      "assetId": "card.dynamis-duel.spell-trap.icon.equip",
+      "defaultVisible": false,
+      "region": {
+        "x": 62,
+        "y": 779,
+        "width": 68,
+        "height": 68
+      }
+    },
+    {
+      "id": "spellTrapIconField",
+      "kind": "image",
+      "label": "Field icon",
+      "group": "Card symbols",
+      "assetId": "card.dynamis-duel.spell-trap.icon.field",
+      "defaultVisible": false,
+      "region": {
+        "x": 62,
+        "y": 779,
+        "width": 68,
+        "height": 68
+      }
+    },
+    {
+      "id": "spellTrapIconQuickPlay",
+      "kind": "image",
+      "label": "Quick Play icon",
+      "group": "Card symbols",
+      "assetId": "card.dynamis-duel.spell-trap.icon.quick-play",
+      "defaultVisible": false,
+      "region": {
+        "x": 62,
+        "y": 779,
+        "width": 68,
+        "height": 68
+      }
+    },
+    {
+      "id": "spellTrapIconRitual",
+      "kind": "image",
+      "label": "Ritual icon",
+      "group": "Card symbols",
+      "assetId": "card.dynamis-duel.spell-trap.icon.ritual",
+      "defaultVisible": false,
+      "region": {
+        "x": 62,
+        "y": 779,
+        "width": 68,
+        "height": 68
+      }
+    },
+    {
+      "id": "typeLine",
+      "kind": "text",
+      "label": "Type line",
+      "group": "Card text",
+      "field": "types",
+      "format": "type-list",
+      "position": {
+        "x": 158,
+        "y": 824
+      },
+      "typography": {
+        "fill": "#111111",
+        "fontFamily": "StoneSerifITCTTBold-ArtificialSC",
+        "fontSize": 30,
+        "fit": "scale-x",
+        "maxWidth": 596,
+        "letterSpacing": 0.25,
+        "fitProfileSet": "type-line"
+      }
+    },
+    {
+      "id": "effectBox",
+      "kind": "svg",
+      "label": "Effect text box",
+      "group": "Artwork and frames",
+      "element": {
+        "tag": "rect",
+        "attributes": {
+          "x": 44,
+          "y": 848,
+          "width": 725,
+          "height": 200,
+          "rx": 4,
+          "fill": "#f7f2e4",
+          "stroke": "#2a2a2a",
+          "stroke-width": 1.5
+        }
+      }
+    },
+    {
+      "id": "description",
+      "kind": "text",
+      "label": "Effect text",
+      "group": "Card text",
+      "field": "description",
+      "format": "lines",
+      "position": {
+        "x": 60,
+        "y": 860
+      },
+      "typography": {
+        "fill": "#111111",
+        "fontFamily": "MatrixBook",
+        "fontSize": 30,
+        "lineHeight": 30,
+        "maxHeight": 180,
+        "maxWidth": 693,
+        "textAlign": "justify",
+        "verticalAnchor": "top",
+        "wrap": "word",
+        "fitProfileSet": "description"
+      }
+    },
+    {
+      "id": "artworkOverlay",
+      "kind": "artwork",
+      "label": "Masked artwork over frame",
+      "group": "Artwork and frames",
+      "field": "artwork",
+      "maskField": "artworkOverlay",
+      "maskChannel": "luminance",
+      "placementRegion": {
+        "x": 42,
+        "y": 124,
+        "width": 729,
+        "height": 700
+      },
+      "transformId": "artwork",
+      "transformMode": "full-art",
+      "region": {
+        "x": 0,
+        "y": 0,
+        "width": 813,
+        "height": 1185
+      }
+    },
+    {
+      "id": "bottomBar",
+      "kind": "svg",
+      "label": "Bottom bar",
+      "group": "Artwork and frames",
+      "element": {
+        "tag": "rect",
+        "attributes": {
+          "x": 28,
+          "y": 1058,
+          "width": 757,
+          "height": 98,
+          "fill": "#1a1a1f"
+        }
+      }
+    },
+    {
+      "id": "eraBox",
+      "kind": "svg",
+      "label": "Era box",
+      "group": "Card symbols",
+      "element": {
+        "tag": "rect",
+        "attributes": {
+          "x": 44,
+          "y": 1082,
+          "width": 40,
+          "height": 40,
+          "rx": 4,
+          "fill": "#f3ecd8"
+        }
+      }
+    },
+    {
+      "id": "era",
+      "kind": "text",
+      "label": "Era number",
+      "group": "Card text",
+      "field": "era",
+      "position": {
+        "x": 64,
+        "y": 1112
+      },
+      "typography": {
+        "fill": "#111111",
+        "fontFamily": "MatrixBoldSmallCaps",
+        "fontSize": 28,
+        "textAnchor": "middle"
+      }
+    },
+    {
+      "id": "effectGroupBox",
+      "kind": "svg",
+      "label": "Effect group box",
+      "group": "Card symbols",
+      "element": {
+        "tag": "rect",
+        "attributes": {
+          "x": 96,
+          "y": 1086,
+          "width": 172,
+          "height": 32,
+          "rx": 4,
+          "fill": "none",
+          "stroke": "#f3ecd8",
+          "stroke-width": 2
+        }
+      }
+    },
+    {
+      "id": "effectGroup",
+      "kind": "text",
+      "label": "Effect group",
+      "group": "Card text",
+      "field": "effectGroup",
+      "position": {
+        "x": 182,
+        "y": 1109
+      },
+      "typography": {
+        "fill": "#f3ecd8",
+        "fontFamily": "StoneSerifStd-Bold",
+        "fontSize": 15,
+        "letterSpacing": 1,
+        "textAnchor": "middle",
+        "fit": "scale-x",
+        "maxWidth": 160
+      }
+    },
+    {
+      "id": "aetherIcon",
+      "kind": "text",
+      "label": "Aether icon",
+      "group": "Card symbols",
+      "semanticPath": "aether.glyph",
+      "defaultVisible": false,
+      "position": {
+        "x": 294,
+        "y": 1115
+      },
+      "typography": {
+        "fill": "#8fd9ff",
+        "fontFamily": "StoneSerifStd-Bold",
+        "fontSize": 34,
+        "textAnchor": "middle"
+      }
+    },
+    {
+      "id": "atkBadge",
+      "kind": "svg",
+      "label": "ATK badge",
+      "group": "Card symbols",
+      "defaultVisible": false,
+      "element": {
+        "tag": "rect",
+        "attributes": {
+          "x": 318,
+          "y": 1086,
+          "width": 56,
+          "height": 32,
+          "rx": 5,
+          "fill": "#c62828"
+        }
+      }
+    },
+    {
+      "id": "atkLabel",
+      "kind": "text",
+      "label": "ATK label",
+      "group": "Card text",
+      "semanticPath": "monster.atkLabel",
+      "defaultVisible": false,
+      "position": {
+        "x": 346,
+        "y": 1110
+      },
+      "typography": {
+        "fill": "#ffffff",
+        "fontFamily": "MatrixBoldSmallCaps",
+        "fontSize": 22,
+        "textAnchor": "middle"
+      }
+    },
+    {
+      "id": "atk",
+      "kind": "text",
+      "label": "ATK value",
+      "group": "Card text",
+      "field": "attack",
+      "defaultVisible": false,
+      "position": {
+        "x": 458,
+        "y": 1117
+      },
+      "typography": {
+        "fill": "#f3ecd8",
+        "fontFamily": "MatrixBoldSmallCaps",
+        "fontSize": 38,
+        "textAnchor": "end",
+        "fit": "scale-x",
+        "maxWidth": 80
+      }
+    },
+    {
+      "id": "statsSeparator",
+      "kind": "svg",
+      "label": "Stats separator",
+      "group": "Card symbols",
+      "defaultVisible": false,
+      "element": {
+        "tag": "polygon",
+        "attributes": {
+          "points": "474,1092 484,1102 474,1112 464,1102",
+          "fill": "#f3ecd8"
+        }
+      }
+    },
+    {
+      "id": "def",
+      "kind": "text",
+      "label": "DEF value",
+      "group": "Card text",
+      "field": "defense",
+      "defaultVisible": false,
+      "position": {
+        "x": 570,
+        "y": 1117
+      },
+      "typography": {
+        "fill": "#f3ecd8",
+        "fontFamily": "MatrixBoldSmallCaps",
+        "fontSize": 38,
+        "textAnchor": "end",
+        "fit": "scale-x",
+        "maxWidth": 80
+      }
+    },
+    {
+      "id": "defBadge",
+      "kind": "svg",
+      "label": "DEF badge",
+      "group": "Card symbols",
+      "defaultVisible": false,
+      "element": {
+        "tag": "rect",
+        "attributes": {
+          "x": 578,
+          "y": 1086,
+          "width": 56,
+          "height": 32,
+          "rx": 5,
+          "fill": "#1565c0"
+        }
+      }
+    },
+    {
+      "id": "defLabel",
+      "kind": "text",
+      "label": "DEF label",
+      "group": "Card text",
+      "semanticPath": "monster.defLabel",
+      "defaultVisible": false,
+      "position": {
+        "x": 606,
+        "y": 1110
+      },
+      "typography": {
+        "fill": "#ffffff",
+        "fontFamily": "MatrixBoldSmallCaps",
+        "fontSize": 22,
+        "textAnchor": "middle"
+      }
+    },
+    {
+      "id": "signatureStar",
+      "kind": "svg",
+      "label": "Signature Move star",
+      "group": "Card symbols",
+      "defaultVisible": false,
+      "element": {
+        "tag": "polygon",
+        "attributes": {
+          "points": "654.0,1087.0 657.5,1097.1 668.3,1097.4 659.7,1103.9 662.8,1114.1 654.0,1108.0 645.2,1114.1 648.3,1103.9 639.7,1097.4 650.5,1097.1",
+          "fill": "#ffd54f"
+        }
+      }
+    },
+    {
+      "id": "setId",
+      "kind": "text",
+      "label": "Set ID",
+      "group": "Card text",
+      "field": "setId",
+      "position": {
+        "x": 770,
+        "y": 1114
+      },
+      "typography": {
+        "fill": "#f3ecd8",
+        "fontFamily": "ITCStoneSerifMedium",
+        "fontSize": 21,
+        "textAnchor": "end",
+        "fit": "scale-x",
+        "maxWidth": 96
+      }
+    }
+  ],
+  "presentationRules": [
+    {
+      "id": "monster-common",
+      "when": {
+        "path": "kind",
+        "equals": "monster"
+      },
+      "layerVisibility": {
+        "levelPlate": true,
+        "levelLabel": true,
+        "level": true,
+        "attribute": true,
+        "attributeGlyph": true,
+        "atkBadge": true,
+        "atkLabel": true,
+        "atk": true,
+        "statsSeparator": true,
+        "def": true,
+        "defBadge": true,
+        "defLabel": true
+      }
+    },
+    {
+      "id": "monster-frame-normal",
+      "when": {
+        "path": "monster.frame",
+        "equals": "normal"
+      },
+      "presets": {
+        "frame": "dynamis-normal-frame"
+      }
+    },
+    {
+      "id": "monster-frame-effect",
+      "when": {
+        "path": "monster.frame",
+        "equals": "effect"
+      },
+      "presets": {
+        "frame": "dynamis-effect-frame"
+      }
+    },
+    {
+      "id": "monster-frame-ritual",
+      "when": {
+        "path": "monster.frame",
+        "equals": "ritual"
+      },
+      "presets": {
+        "frame": "dynamis-ritual-frame"
+      }
+    },
+    {
+      "id": "monster-frame-fusion",
+      "when": {
+        "path": "monster.frame",
+        "equals": "fusion"
+      },
+      "presets": {
+        "frame": "dynamis-fusion-frame"
+      }
+    },
+    {
+      "id": "monster-frame-ultimatch",
+      "when": {
+        "path": "monster.frame",
+        "equals": "ultimatch"
+      },
+      "presets": {
+        "frame": "dynamis-ultimatch-frame"
+      }
+    },
+    {
+      "id": "monster-frame-transformation",
+      "when": {
+        "path": "monster.frame",
+        "equals": "transformation"
+      },
+      "presets": {
+        "frame": "dynamis-transformation-frame"
+      }
+    },
+    {
+      "id": "monster-frame-god",
+      "when": {
+        "path": "monster.frame",
+        "equals": "god"
+      },
+      "presets": {
+        "frame": "dynamis-god-frame"
+      }
+    },
+    {
+      "id": "monster-attribute-dark",
+      "when": {
+        "path": "monster.attribute",
+        "equals": "DARK"
+      },
+      "layerVisibility": {
+        "attributePlateDark": true
+      }
+    },
+    {
+      "id": "monster-attribute-light",
+      "when": {
+        "path": "monster.attribute",
+        "equals": "LIGHT"
+      },
+      "layerVisibility": {
+        "attributePlateLight": true
+      }
+    },
+    {
+      "id": "monster-attribute-earth",
+      "when": {
+        "path": "monster.attribute",
+        "equals": "EARTH"
+      },
+      "layerVisibility": {
+        "attributePlateEarth": true
+      }
+    },
+    {
+      "id": "monster-attribute-water",
+      "when": {
+        "path": "monster.attribute",
+        "equals": "WATER"
+      },
+      "layerVisibility": {
+        "attributePlateWater": true
+      }
+    },
+    {
+      "id": "monster-attribute-fire",
+      "when": {
+        "path": "monster.attribute",
+        "equals": "FIRE"
+      },
+      "layerVisibility": {
+        "attributePlateFire": true
+      }
+    },
+    {
+      "id": "monster-attribute-wind",
+      "when": {
+        "path": "monster.attribute",
+        "equals": "WIND"
+      },
+      "layerVisibility": {
+        "attributePlateWind": true
+      }
+    },
+    {
+      "id": "monster-attribute-divine",
+      "when": {
+        "path": "monster.attribute",
+        "equals": "DIVINE"
+      },
+      "layerVisibility": {
+        "attributePlateDivine": true
+      }
+    },
+    {
+      "id": "spell-card",
+      "when": {
+        "path": "kind",
+        "equals": "spell"
+      },
+      "presets": {
+        "frame": "dynamis-spell-frame"
+      },
+      "layerVisibility": {
+        "attributePlateSpell": true,
+        "attribute": true,
+        "attributeGlyph": true,
+        "spellTrapIconPlate": true
+      },
+      "textValues": {
+        "attribute": "SPELL",
+        "attributeGlyph": "魔"
+      }
+    },
+    {
+      "id": "trap-card",
+      "when": {
+        "path": "kind",
+        "equals": "trap"
+      },
+      "presets": {
+        "frame": "dynamis-trap-frame"
+      },
+      "layerVisibility": {
+        "attributePlateTrap": true,
+        "attribute": true,
+        "attributeGlyph": true,
+        "spellTrapIconPlate": true
+      },
+      "textValues": {
+        "attribute": "TRAP",
+        "attributeGlyph": "罠"
+      }
+    },
+    {
+      "id": "spell-trap-icon-continuous",
+      "when": {
+        "path": "spellTrap.type",
+        "equals": "continuous"
+      },
+      "layerVisibility": {
+        "spellTrapIconContinuous": true
+      }
+    },
+    {
+      "id": "spell-trap-icon-counter",
+      "when": {
+        "path": "spellTrap.type",
+        "equals": "counter"
+      },
+      "layerVisibility": {
+        "spellTrapIconCounter": true
+      }
+    },
+    {
+      "id": "spell-trap-icon-equip",
+      "when": {
+        "path": "spellTrap.type",
+        "equals": "equip"
+      },
+      "layerVisibility": {
+        "spellTrapIconEquip": true
+      }
+    },
+    {
+      "id": "spell-trap-icon-field",
+      "when": {
+        "path": "spellTrap.type",
+        "equals": "field"
+      },
+      "layerVisibility": {
+        "spellTrapIconField": true
+      }
+    },
+    {
+      "id": "spell-trap-icon-quick-play",
+      "when": {
+        "path": "spellTrap.type",
+        "equals": "quick-play"
+      },
+      "layerVisibility": {
+        "spellTrapIconQuickPlay": true
+      }
+    },
+    {
+      "id": "spell-trap-icon-ritual",
+      "when": {
+        "path": "spellTrap.type",
+        "equals": "ritual"
+      },
+      "layerVisibility": {
+        "spellTrapIconRitual": true
+      }
+    },
+    {
+      "id": "aether-icon",
+      "when": {
+        "path": "aether",
+        "equals": true
+      },
+      "layerVisibility": {
+        "aetherIcon": true
+      }
+    },
+    {
+      "id": "signature-move-star",
+      "when": {
+        "path": "signatureMove",
+        "equals": true
+      },
+      "layerVisibility": {
+        "signatureStar": true
+      }
+    }
+  ]
+}

@@ -103,5 +103,30 @@
       "font.stone-serif-itc-semi": "../../../shared/fonts/Stone Serif ITC Semi.woff2"
     },
     "colorPresets": "./color-presets.json"
+  },
+  {
+    "id": "card/dynamis-duel",
+    "kind": "card",
+    "name": "Dynamis Duel",
+    "version": "2026.10.02",
+    "template": "./template.json",
+    "colorPresets": "./color-presets.json",
+    "assets": {
+      "card.dynamis-duel.border": "../../../shared/border.webp",
+      "card.dynamis-duel.frame-texture": "../../../shared/frame-texture.webp",
+      "card.dynamis-duel.spell-trap.icon.continuous": "../series-10/assets/spell-trap-icon-continuous.webp",
+      "card.dynamis-duel.spell-trap.icon.counter": "../series-10/assets/spell-trap-icon-counter.webp",
+      "card.dynamis-duel.spell-trap.icon.equip": "../series-10/assets/spell-trap-icon-equip.webp",
+      "card.dynamis-duel.spell-trap.icon.field": "../series-10/assets/spell-trap-icon-field.webp",
+      "card.dynamis-duel.spell-trap.icon.quick-play": "../series-10/assets/spell-trap-icon-quick-play.webp",
+      "card.dynamis-duel.spell-trap.icon.ritual": "../series-10/assets/spell-trap-icon-ritual.webp",
+      "font.matrix-regular-small-caps": "../../../shared/fonts/MatrixRegularSmallCaps.woff2",
+      "font.matrix-bold-small-caps": "../../../shared/fonts/MatrixBoldSmallCaps.woff2",
+      "font.matrix-book": "../../../shared/fonts/MatrixBook.woff2",
+      "font.itc-stone-serif-std-bold": "../../../shared/fonts/ITCStoneSerifStdBold.woff2",
+      "font.itc-stone-serif-medium": "../../../shared/fonts/ITCStoneSerifMedium.woff2",
+      "font.stone-serif-itc-tt-sc-bold": "../../../shared/fonts/Stone Serif ITC TT Small Caps Bold.woff2",
+      "font.dfp-reisho-w6-jajwa": "../../../shared/fonts/DFP-ReiSho-W6-JAJWA.woff"
+    }
   }
 ]

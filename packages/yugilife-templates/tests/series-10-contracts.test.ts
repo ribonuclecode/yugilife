@@ -22,7 +22,7 @@ describe("Series 10 published contract", () => {
     expect(DEFAULT_TEMPLATE.manifest).not.toHaveProperty("references")
     expect(DEFAULT_TEMPLATE.manifest).not.toHaveProperty("status")
     expect(validateCardTemplate(DEFAULT_TEMPLATE.template)).toStrictEqual(DEFAULT_TEMPLATE.template)
-    expect(TEMPLATE_CATALOG).toHaveLength(1)
+    expect(TEMPLATE_CATALOG).toHaveLength(2)
     expect(TEMPLATE_CATALOG[0]).toBe(DEFAULT_TEMPLATE)
     expect(Object.isFrozen(TEMPLATE_CATALOG)).toBe(true)
     expect(Object.isFrozen(DEFAULT_TEMPLATE)).toBe(true)

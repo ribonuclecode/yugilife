@@ -68,7 +68,8 @@ describe("CLI argument boundary", () => {
     await expect(runCli(["templates", "list"], captured.io)).resolves.toBe(0)
     expect(captured.read()).toEqual({
       stderr: "",
-      stdout: "card/series-10@2026.09.23\tpackaged\tSeries 10\n",
+      stdout:
+        "card/dynamis-duel@2026.10.02\tpackaged\tDynamis Duel\ncard/series-10@2026.09.23\tpackaged\tSeries 10\n",
     })
   })
 
