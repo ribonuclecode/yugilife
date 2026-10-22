@@ -4,7 +4,7 @@ import type { Page } from "@playwright/test"
 
 interface FixtureWindow {
   renderVisualFixture(search: string): Promise<void>
-  verifyPreparedTextures(): Promise<{ checked: number; mismatches: string[] }>
+  verifyPreparedTextures(templateId?: string): Promise<{ checked: number; mismatches: string[] }>
 }
 
 /**
@@ -42,6 +42,9 @@ export async function showFixture(page: Page, search: string) {
   return page.locator("[data-visual-fixture]")
 }
 
-export async function checkPreparedTextures(page: Page) {
-  return await page.evaluate(() => (window as unknown as FixtureWindow).verifyPreparedTextures())
+export async function checkPreparedTextures(page: Page, templateId?: string) {
+  return await page.evaluate(
+    (id) => (window as unknown as FixtureWindow).verifyPreparedTextures(id),
+    templateId,
+  )
 }

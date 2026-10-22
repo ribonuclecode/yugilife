@@ -4,9 +4,7 @@ import {
   preparedTextureKey,
 } from "yugilife-core/color-grading"
 
-import { DEFAULT_TEMPLATE } from "../../src/index"
-
-import type { PreparedTextures, TexturePreparation } from "yugilife-core"
+import type { CardTemplateBundle, PreparedTextures, TexturePreparation } from "yugilife-core"
 
 export interface PreparedTextureCheck {
   checked: number
@@ -33,8 +31,8 @@ function loadImage(source: string) {
   })
 }
 
-async function gradedPixels(preparation: TexturePreparation) {
-  const source = DEFAULT_TEMPLATE.assets[preparation.assetId]
+async function gradedPixels(bundle: CardTemplateBundle, preparation: TexturePreparation) {
+  const source = bundle.assets[preparation.assetId]
   if (typeof source !== "string") {
     throw new Error(`Texture asset "${preparation.assetId}" is not a fetchable URL.`)
   }
@@ -58,19 +56,17 @@ async function gradedPixels(preparation: TexturePreparation) {
     region.height,
   )
   const pixels = context.getImageData(0, 0, region.width, region.height)
-  const preset = DEFAULT_TEMPLATE.colorPresets[preparation.presetName]
+  const preset = bundle.colorPresets[preparation.presetName]
   if (!preset) throw new Error(`Unknown color preset "${preparation.presetName}".`)
   applyColorPreset(pixels, preset)
   return pixels
 }
 
 export async function verifyPreparedTextures(
+  bundle: CardTemplateBundle,
   textures: PreparedTextures,
 ): Promise<PreparedTextureCheck> {
-  const preparations = collectTexturePreparations(
-    DEFAULT_TEMPLATE.template,
-    DEFAULT_TEMPLATE.colorPresets,
-  )
+  const preparations = collectTexturePreparations(bundle.template, bundle.colorPresets)
   const mismatches: string[] = []
 
   for (const preparation of preparations) {
@@ -80,7 +76,7 @@ export async function verifyPreparedTextures(
       mismatches.push(`${key}: no prepared texture`)
       continue
     }
-    const expectedPixels = await gradedPixels(preparation)
+    const expectedPixels = await gradedPixels(bundle, preparation)
     const { width, height } = expectedPixels
 
     const expectedContext = canvasContext(width, height)

@@ -1,10 +1,11 @@
 import { createCardFromTemplate, exportCardToSvg } from "yugilife-core"
 import { prepareTemplateTextures } from "yugilife-core/color-grading"
 
-import { DEFAULT_TEMPLATE } from "../../src/index"
+import { DEFAULT_TEMPLATE, getOfficialTemplate } from "../../src/index"
 
 import { verifyPreparedTextures } from "./prepared-texture-check"
 
+import type { OfficialTemplate } from "../../src/index"
 import type { PreparedTextureCheck } from "./prepared-texture-check"
 import type { CardData, PreparedTextures } from "yugilife-core"
 
@@ -57,7 +58,54 @@ const syntheticArtworkMask = `data:image/svg+xml,${encodeURIComponent(`
   </svg>
 `)}`
 
-function fixtureCard(parameters: URLSearchParams) {
+/** `?template=<id>` selects any bundled template; the default keeps every existing baseline. */
+function fixtureBundle(parameters: URLSearchParams): OfficialTemplate {
+  const templateId = parameters.get("template")
+  return templateId ? getOfficialTemplate(templateId) : DEFAULT_TEMPLATE
+}
+
+/**
+ * A synthetic card for a template other than Series 10, built only from its own declared fields.
+ * The generic parameters cover what every card template exposes; template-specific knobs are
+ * passed as `field=value` pairs and are ignored when the template does not declare that field.
+ */
+function genericFixtureCard(parameters: URLSearchParams, bundle: OfficialTemplate): CardData {
+  const base = createCardFromTemplate(bundle.template)
+  const card: Record<string, unknown> = {
+    ...base,
+    ...(parameters.get("artwork") !== "false" ? { artwork: syntheticArtwork } : {}),
+    ...(parameters.get("fullArt") === "true" ? { artworkOverlay: syntheticArtworkMask } : {}),
+    name: parameters.has("variant")
+      ? `${(parameters.get("variant") ?? "").toLocaleUpperCase()} VISUAL DRAGON`
+      : "FIXED VISUAL DRAGON",
+    ...(parameters.get("rich") === "true"
+      ? {
+          description: [
+            'A <b>bold</b>, <i>italic</i>, <color value="#7a1515">colored</color> path with <sup>sup</sup> and <shift x="3px" y="-2px">shift</shift>.',
+          ],
+        }
+      : {}),
+  }
+  if (parameters.has("variant")) card.cardVariant = parameters.get("variant")
+  for (const field of bundle.template.cardFields) {
+    if (field.kind === "image" || !parameters.has(field.name)) continue
+    const raw = parameters.get(field.name) ?? ""
+    card[field.name] =
+      field.kind === "boolean"
+        ? raw === "true"
+        : field.kind === "number"
+          ? Number(raw)
+          : field.kind === "text-list" || field.kind === "multiline"
+            ? raw.split("|")
+            : raw
+  }
+  return card as CardData
+}
+
+function fixtureCard(parameters: URLSearchParams, bundle: OfficialTemplate) {
+  if (bundle !== DEFAULT_TEMPLATE) {
+    return { card: genericFixtureCard(parameters, bundle), id: `synthetic:${bundle.id}` }
+  }
   const requestedFixtureId = parameters.get("fixture")
   const realCardFixture = requestedFixtureId ? realCardFixtures.get(requestedFixtureId) : undefined
   if (requestedFixtureId && !realCardFixture) {
@@ -110,10 +158,14 @@ function fixtureCard(parameters: URLSearchParams) {
   return { card, id: "synthetic" }
 }
 
-let preparing: Promise<PreparedTextures> | undefined
-function preparedTextures() {
-  preparing ??= prepareTemplateTextures(DEFAULT_TEMPLATE).then(({ textures }) => textures)
-  return preparing
+const preparing = new Map<string, Promise<PreparedTextures>>()
+function preparedTextures(bundle: OfficialTemplate) {
+  let pending = preparing.get(bundle.id)
+  if (!pending) {
+    pending = prepareTemplateTextures(bundle).then(({ textures }) => textures)
+    preparing.set(bundle.id, pending)
+  }
+  return pending
 }
 
 function fixtureHost() {
@@ -128,10 +180,12 @@ async function drawFixture(search: string) {
   delete host.dataset.ready
   delete host.dataset.error
   try {
-    const { card, id } = fixtureCard(parameters)
-    const textures = parameters.get("prepared") === "false" ? undefined : await preparedTextures()
+    const bundle = fixtureBundle(parameters)
+    const { card, id } = fixtureCard(parameters, bundle)
+    const textures =
+      parameters.get("prepared") === "false" ? undefined : await preparedTextures(bundle)
     host.innerHTML = await exportCardToSvg(card, {
-      templateBundle: DEFAULT_TEMPLATE,
+      templateBundle: bundle,
       title: card.name,
       ...(textures ? { preparedTextures: textures } : {}),
       ...(parameters.get("fullArt") === "true"
@@ -166,11 +220,14 @@ function renderFixture(search: string) {
 declare global {
   interface Window {
     renderVisualFixture(search: string): Promise<void>
-    verifyPreparedTextures(): Promise<PreparedTextureCheck>
+    verifyPreparedTextures(templateId?: string): Promise<PreparedTextureCheck>
   }
 }
 
 window.renderVisualFixture = renderFixture
-window.verifyPreparedTextures = async () => await verifyPreparedTextures(await preparedTextures())
+window.verifyPreparedTextures = async (templateId?: string) => {
+  const bundle = templateId ? getOfficialTemplate(templateId) : DEFAULT_TEMPLATE
+  return await verifyPreparedTextures(bundle, await preparedTextures(bundle))
+}
 
 await renderFixture(window.location.search)
