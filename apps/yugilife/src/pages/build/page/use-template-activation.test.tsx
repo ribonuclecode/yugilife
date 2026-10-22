@@ -10,7 +10,10 @@ import type { CardTemplateBundle } from "yugilife-core"
 
 const dynamisDuel = getOfficialTemplate("card/dynamis-duel")
 
-const mocks = vi.hoisted(() => ({ load: vi.fn() }))
+const mocks = vi.hoisted(() => ({
+  load: vi.fn(),
+  templates: [] as { bundle: CardTemplateBundle; id: string; source: string; version: string }[],
+}))
 vi.mock("yugilife-templates", async (importOriginal) => {
   const actual = await importOriginal<{ getOfficialTemplate: typeof getOfficialTemplate }>()
   return {
@@ -21,17 +24,21 @@ vi.mock("yugilife-templates", async (importOriginal) => {
 vi.mock("../templates/template-storage", () => ({
   deleteStoredTemplate: vi.fn(),
   getTemplateStorageMode: () => "memory",
-  readStoredTemplate: vi.fn(() => Promise.resolve(undefined)),
+  readStoredTemplate: (id: string) =>
+    Promise.resolve(mocks.templates.find((template) => template.id === id)),
   readTemplateStorageSnapshot: () =>
     Promise.resolve({
       originStorage: {},
       preparedTextureBytes: 0,
       storageMode: "memory",
-      templates: [],
+      templates: [...mocks.templates],
     }),
   storeTemplate: vi.fn(() => Promise.resolve()),
   templateBundleMatchesVersion: (bundle: CardTemplateBundle | undefined, id: string) =>
     bundle?.manifest.id === id,
+}))
+vi.mock("../../inventory/persistence/inventory-storage", () => ({
+  listInventoryCards: () => Promise.resolve([]),
 }))
 vi.mock("../templates/prepare-template-textures", () => ({
   acquirePreparedTextures: () => new Promise(() => undefined),
@@ -74,6 +81,7 @@ function Harness({ storedTemplateId }: { storedTemplateId: string }) {
 }
 
 afterEach(() => {
+  mocks.templates = []
   vi.clearAllMocks()
   vi.unstubAllGlobals()
 })
@@ -103,5 +111,26 @@ it("drops a template download that was in flight when another template's documen
   expect(setTemplateIdentity).not.toHaveBeenCalledWith(DEFAULT_TEMPLATE.id, expect.anything())
   expect(setTemplateIdentity).toHaveBeenLastCalledWith(dynamisDuel.id, dynamisDuel.version)
   expect(resetCard).not.toHaveBeenCalled()
+  act(() => root.unmount())
+})
+
+it("starts a blank default card when a removed user template's card cannot keep its data", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true)
+  const copy = { ...dynamisDuel, manifest: { ...dynamisDuel.manifest, id: "user/dynamis-copy" } }
+  mocks.templates = [{ bundle: copy, id: copy.manifest.id, source: "user", version: "1" }]
+  const root = createRoot(document.createElement("div"))
+  const flush = () => act(async () => await new Promise((resolve) => setTimeout(resolve, 0)))
+
+  act(() => root.render(<Harness storedTemplateId={copy.manifest.id} />))
+  await flush()
+  expect(setTemplateIdentity).toHaveBeenLastCalledWith(copy.manifest.id, copy.manifest.version)
+
+  mocks.templates = []
+  await act(async () => {
+    await activation.removeSelectedTemplate()
+  })
+
+  // Dynamis Duel fields are not Series 10 data, so relabelling the card would render garbage.
+  expect(resetCard).toHaveBeenCalledWith(DEFAULT_TEMPLATE)
   act(() => root.unmount())
 })

@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-import { DEFAULT_TEMPLATE_ID, getOfficialTemplate, TEMPLATE_CATALOG } from "yugilife-templates"
+import {
+  DEFAULT_TEMPLATE,
+  DEFAULT_TEMPLATE_ID,
+  getOfficialTemplate,
+  TEMPLATE_CATALOG,
+} from "yugilife-templates"
 
 import { errorMessage } from "@/lib/utils"
 
@@ -326,8 +331,13 @@ export function useTemplateActivation({
     setTemplateLoadProgress(undefined)
   }
 
+  /** Falls back to the default template, starting a blank card when this one cannot carry over. */
   function resetTemplateIdentity() {
-    setTemplateIdentity(DEFAULT_TEMPLATE_ID, editorTemplateVersion)
+    if (switchKeepsCard(DEFAULT_TEMPLATE)) {
+      setTemplateIdentity(DEFAULT_TEMPLATE_ID, editorTemplateVersion)
+    } else {
+      resetCard(DEFAULT_TEMPLATE)
+    }
   }
 
   /** Cancels any load in flight: it would resolve against the document it started for. */
