@@ -1,4 +1,4 @@
-import { editorColorPresets, editorTemplate } from "../../build/editor/model/editor-config"
+import { officialTemplateBundle } from "../../build/editor/model/editor-config"
 import { validateEditorDocumentState } from "../../build/editor/model/editor-document-validation"
 import { createInitialEditorDocument } from "../../build/editor/model/editor-store"
 import {
@@ -10,6 +10,7 @@ import { readStoredTemplate } from "../../build/templates/template-storage"
 
 import type { EditorDocumentState } from "../../build/editor/model/editor-document"
 import type { InventoryCard } from "./inventory-card"
+import type { CardTemplateBundle } from "yugilife-core"
 
 export function migrateInventoryCardDocument(
   document: EditorDocumentState,
@@ -38,22 +39,27 @@ export function migrateInventoryCardDocument(
   return validateEditorDocumentState(candidate, template, colorPresets)
 }
 
-export async function migrateInventoryCardToCurrentTemplate(saved: InventoryCard) {
-  let current = createInitialEditorDocument()
-  let template = editorTemplate
-  let colorPresets = editorColorPresets
-  if (saved.document.templateId.startsWith("user/")) {
-    const stored = await readStoredTemplate(saved.document.templateId)
-    if (!stored || stored.source !== "user") {
-      throw new Error(
-        `The card requires user template "${saved.document.templateId}", which is not installed.`,
-      )
-    }
-    current = { ...current, templateId: stored.id, templateVersion: stored.version }
-    template = stored.bundle.template
-    colorPresets = stored.bundle.colorPresets
+/**
+ * The bundle a card's template ID resolves to: a stored user template, or the official template of
+ * that ID. An unknown official ID resolves to the default, whose migration then rejects the card.
+ */
+export async function resolveCardTemplateBundle(templateId: string): Promise<CardTemplateBundle> {
+  if (!templateId.startsWith("user/")) return officialTemplateBundle(templateId)
+  const stored = await readStoredTemplate(templateId)
+  if (!stored || stored.source !== "user") {
+    throw new Error(`The card requires user template "${templateId}", which is not installed.`)
   }
-  const document = migrateInventoryCardDocument(saved.document, current, template, colorPresets)
+  return stored.bundle
+}
+
+export async function migrateInventoryCardToCurrentTemplate(saved: InventoryCard) {
+  const bundle = await resolveCardTemplateBundle(saved.document.templateId)
+  const document = migrateInventoryCardDocument(
+    saved.document,
+    createInitialEditorDocument(bundle),
+    bundle.template,
+    bundle.colorPresets,
+  )
   if (
     document.templateId === saved.document.templateId &&
     document.templateVersion === saved.document.templateVersion

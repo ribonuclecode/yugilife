@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
+import { getOfficialTemplate } from "yugilife-templates"
 
 import { createInitialEditorDocument } from "../../build/editor/model/editor-store"
 import {
@@ -141,5 +142,24 @@ describe("inventory card migration is a pure read", () => {
   it("leaves a card on the current template untouched", async () => {
     const saved = await createInventoryCard(createInitialEditorDocument())
     expect(await migrateInventoryCardToCurrentTemplate(saved)).toBe(saved)
+  })
+
+  it("opens a card saved with another official template without migrating it", async () => {
+    const dynamis = getOfficialTemplate("card/dynamis-duel")
+    const document = createInitialEditorDocument(dynamis)
+    const saved = await createInventoryCard({ ...document, layers: { levelPlate: false } })
+
+    expect(await migrateInventoryCardToCurrentTemplate(saved)).toBe(saved)
+  })
+
+  it("still rejects a card whose official template is unknown", async () => {
+    const saved = await createInventoryCard(createInitialEditorDocument())
+
+    await expect(
+      migrateInventoryCardToCurrentTemplate({
+        ...saved,
+        document: { ...saved.document, templateId: "card/unknown" },
+      }),
+    ).rejects.toThrow(/No migration is available/)
   })
 })

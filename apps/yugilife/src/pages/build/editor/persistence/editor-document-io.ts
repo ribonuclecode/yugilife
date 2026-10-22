@@ -9,18 +9,16 @@ import {
 import { migrateEditorTemplateVersion } from "../../migrations/template"
 import { requireCompletedArtworkMask } from "../model/artwork-mask-state"
 import {
-  createInitialCard,
-  editorArtworkField,
+  artworkEditorConfig,
   editorDefaultLayerVisibility,
   editorPresetTargets,
-  editorTemplate,
-  editorTemplateId,
-  editorTemplateVersion,
+  officialTemplateBundle,
 } from "../model/editor-config"
 import { validateEditorDocumentState } from "../model/editor-document-validation"
+import { createInitialEditorDocument } from "../model/editor-store"
 
 import type { EditorDocumentState } from "../model/editor-document"
-import type { CardData, CardFieldValue } from "yugilife-core"
+import type { CardData, CardFieldValue, CardTemplateBundle } from "yugilife-core"
 
 const editorDocumentFormat = "yugilife/editor-document"
 export const maximumEditorDocumentBytes = 64 * 1024 * 1024
@@ -104,7 +102,10 @@ async function jsonCard(card: CardData): Promise<Record<string, unknown>> {
 }
 
 export async function serializeEditorDocument(document: EditorDocumentState) {
-  requireCompletedArtworkMask(document, editorArtworkField)
+  requireCompletedArtworkMask(
+    document,
+    artworkEditorConfig(officialTemplateBundle(document.templateId).template).field,
+  )
   const artworkMask = {
     ...document.artworkMask,
     ...(document.artworkMask.automaticMask
@@ -128,6 +129,8 @@ export async function serializeEditorDocument(document: EditorDocumentState) {
   return source
 }
 
+// Schema migrations only run on files older than the current schema, all of which predate any
+// template other than the default, so their defaults deliberately stay the default template's.
 const migrationContext = {
   defaultLayerVisibility: editorDefaultLayerVisibility,
   defaultPresets: Object.fromEntries(
@@ -135,21 +138,13 @@ const migrationContext = {
   ),
 }
 
-function currentDocument(): EditorDocumentState {
-  return {
-    artworkMask: { mode: "automatic", points: [] },
-    artworkMaskEffects: {},
-    card: createInitialCard(),
-    layers: {},
-    mode: "automatic",
-    presetOverrides: {},
-    presentationOverrides: {},
-    templateId: editorTemplateId,
-    templateVersion: editorTemplateVersion,
-  }
-}
+/** Resolves a stored user template synchronously; `undefined` means it is not available here. */
+export type UserTemplateResolver = (templateId: string) => CardTemplateBundle | undefined
 
-export function parseEditorDocument(source: string): EditorDocumentState {
+export function parseEditorDocument(
+  source: string,
+  resolveUserTemplate: UserTemplateResolver = () => undefined,
+): EditorDocumentState {
   if (source.length > maximumEditorDocumentBytes) {
     throw new Error(
       `Editor documents must be smaller than ${maximumEditorDocumentBytes / 1024 / 1024} MiB.`,
@@ -171,19 +166,28 @@ export function parseEditorDocument(source: string): EditorDocumentState {
     throw new Error("Editor document schemaVersion must be an integer.")
   }
 
-  const initial = currentDocument()
   const documentShape = migrateEditorDocumentSchema(
     parsed.document,
     Number(schemaVersion),
     migrationContext,
   )
+  // The document is parsed against its own template: an official one by ID, or a stored user
+  // template. A user template that is not stored here keeps its identity so the caller can ask for
+  // it to be imported first, and is otherwise read with the default template's contract.
+  const documentTemplateId =
+    typeof documentShape.templateId === "string" ? documentShape.templateId : ""
+  const userBundle = documentTemplateId.startsWith("user/")
+    ? resolveUserTemplate(documentTemplateId)
+    : undefined
+  const bundle = userBundle ?? officialTemplateBundle(documentTemplateId)
+  const initial = createInitialEditorDocument(bundle)
   const migrationTarget =
-    typeof documentShape.templateId === "string" &&
-    documentShape.templateId.startsWith("user/") &&
+    !userBundle &&
+    documentTemplateId.startsWith("user/") &&
     isTemplateVersion(documentShape.templateVersion)
       ? {
           ...initial,
-          templateId: documentShape.templateId,
+          templateId: documentTemplateId,
           templateVersion: documentShape.templateVersion,
         }
       : initial
@@ -208,7 +212,7 @@ export function parseEditorDocument(source: string): EditorDocumentState {
     card: Object.fromEntries(
       Object.entries({ ...initial.card, ...migrated.card }).map(([field, value]) => [
         field,
-        editorTemplate.cardFields.some(
+        bundle.template.cardFields.some(
           (definition) => definition.name === field && definition.kind === "image",
         ) &&
         typeof value === "string" &&
@@ -234,7 +238,7 @@ export function parseEditorDocument(source: string): EditorDocumentState {
     document.card = { ...document.card, artworkOverlay: "" }
   }
   try {
-    return validateEditorDocumentState(document)
+    return validateEditorDocumentState(document, bundle.template, bundle.colorPresets)
   } catch (error) {
     throw new Error("Editor document contains invalid editor state.", { cause: error })
   }

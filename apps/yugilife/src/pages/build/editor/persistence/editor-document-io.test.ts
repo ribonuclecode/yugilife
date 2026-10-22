@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest"
+import { getOfficialTemplate } from "yugilife-templates"
 
 import { currentEditorDocumentVersion } from "../../migrations/document"
 import { createInitialCard, editorTemplateId, editorTemplateVersion } from "../model/editor-config"
+import { createInitialEditorDocument } from "../model/editor-store"
 
 import { parseEditorDocument, serializeEditorDocument } from "./editor-document-io"
 
@@ -76,6 +78,48 @@ describe("editor document JSON", () => {
       templateId: "user/example",
       templateVersion: "2026.08.12.1",
     })
+  })
+
+  it("round-trips a document of another official template against that template", async () => {
+    const dynamis = getOfficialTemplate("card/dynamis-duel")
+    const initial = createInitialEditorDocument(dynamis)
+    const dynamisDocument = {
+      ...initial,
+      card: { ...initial.card, aether: true, name: "Portable Dynamis card" },
+      layers: { levelPlate: false },
+    }
+
+    const parsed = parseEditorDocument(await serializeEditorDocument(dynamisDocument))
+
+    expect(parsed).toMatchObject({
+      card: { aether: true, name: "Portable Dynamis card" },
+      layers: { levelPlate: false },
+      templateId: "card/dynamis-duel",
+      templateVersion: dynamis.version,
+    })
+    expect(parsed.card).not.toHaveProperty("rank")
+  })
+
+  it("parses a user-template document against the resolved user bundle", async () => {
+    const dynamis = getOfficialTemplate("card/dynamis-duel")
+    const userBundle = {
+      ...dynamis,
+      manifest: { ...dynamis.manifest, id: "user/dynamis-copy", version: "2026.10.02.1" },
+    }
+    const initial = createInitialEditorDocument(userBundle)
+    const source = await serializeEditorDocument({ ...initial, layers: { levelPlate: false } })
+
+    expect(
+      parseEditorDocument(source, (templateId) =>
+        templateId === "user/dynamis-copy" ? userBundle : undefined,
+      ),
+    ).toMatchObject({
+      layers: { levelPlate: false },
+      templateId: "user/dynamis-copy",
+      templateVersion: "2026.10.02.1",
+    })
+    // Without the user template, the default contract does not know the Dynamis layer.
+    expect(() => parseEditorDocument(source)).toThrow(/invalid editor state/)
   })
 
   it("imports pre-split Series 10 documents with the retired Link-arrow mask", () => {
