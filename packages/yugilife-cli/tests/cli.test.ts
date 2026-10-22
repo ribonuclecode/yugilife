@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import { compareTemplateVersions } from "yugilife-core"
 
 import { runCli } from "../src/cli.js"
-import { decodeRasterDataUrl, loadRenderRequest } from "../src/runtime/input.js"
+import { buildRenderRequest, decodeRasterDataUrl, loadRenderRequest } from "../src/runtime/input.js"
 
 const temporaryDirectories: string[] = []
 
@@ -217,6 +217,22 @@ describe("JSON transport", () => {
       /^data:image\/webp;base64,/u,
     )
     expect(request.files.artwork).toMatch(/^data:image\/png;base64,/u)
+  })
+
+  it("builds an in-memory request with files relative to a base directory", async () => {
+    const directory = await temporaryDirectory()
+    await writeFile(path.join(directory, "art.jpg"), Buffer.from([255, 216, 255]))
+
+    const request = await buildRenderRequest(
+      { card: { name: "In memory" }, files: { artwork: "./art.jpg" } },
+      "render() input",
+      directory,
+      "png",
+      { scale: 2 },
+    )
+    expect(request.format).toBe("png")
+    expect(request.rasterOptions).toEqual({ size: { scale: 2 } })
+    expect(request.files.artwork).toMatch(/^data:image\/jpeg;base64,/u)
   })
 
   it("transports presentation overrides for full-art and crop rendering", async () => {

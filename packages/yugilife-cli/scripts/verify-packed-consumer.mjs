@@ -193,8 +193,28 @@ try {
   ) {
     throw new Error("Packed CLI did not produce WebP output.")
   }
+  const apiScriptPath = path.join(consumerDirectory, "api.mjs")
+  await writeFile(
+    apiScriptPath,
+    `import { launchBrowser, render } from "yugilife-cli"
+const pngSignature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
+const input = { card: { cardVariant: "effect", name: "Packed API" } }
+const browser = await launchBrowser()
+let outputs
+try {
+  outputs = await Promise.all([render(input, { browser }), render(input, { browser, scale: 0.5 })])
+} finally {
+  await browser.close()
+}
+outputs.push(await render(input))
+for (const { data } of outputs) {
+  if (!data.subarray(0, 8).equals(pngSignature)) throw new Error("render() did not return PNG bytes.")
+}
+`,
+  )
+  await run(process.execPath, [apiScriptPath], consumerDirectory, "packed-consumer: render() API")
   console.log(
-    "Verified the packed CLI bin, browser harness, doctor command, and SVG/PNG/JPEG/WebP renders",
+    "Verified the packed CLI bin, browser harness, doctor command, SVG/PNG/JPEG/WebP renders, and the render() API",
   )
 } catch (error) {
   failure = error

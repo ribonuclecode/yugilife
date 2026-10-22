@@ -217,13 +217,30 @@ export async function loadRenderRequest(
       cause: error,
     })
   }
-  const input = parseInput(parsed, inputPath)
+  return buildRenderRequest(
+    parsed,
+    inputPath,
+    path.dirname(resolvedInputPath),
+    outputFormat(outputPath),
+    options,
+  )
+}
+
+/** Builds a request from an already-parsed input; file references resolve against `baseDirectory`. */
+export async function buildRenderRequest(
+  value: unknown,
+  inputName: string,
+  baseDirectory: string,
+  format: RenderFormat,
+  options: RenderRequestOptions = {},
+): Promise<SerializedRenderRequest> {
+  const input = parseInput(value, inputName)
   const files = Object.create(null) as Record<string, string>
   for (const [key, reference] of Object.entries(input.files ?? {})) {
     if (typeof reference !== "string") {
-      throw invalidInput(`File reference "${key}" in "${inputPath}" must be a string.`)
+      throw invalidInput(`File reference "${key}" in "${inputName}" must be a string.`)
     }
-    files[key] = await readFileAsDataUrl(path.dirname(resolvedInputPath), reference, key)
+    files[key] = await readFileAsDataUrl(baseDirectory, reference, key)
   }
 
   const inputTemplateId = input.template
@@ -237,7 +254,6 @@ export async function loadRenderRequest(
     ? undefined
     : (options.templateReference ?? inputTemplateId)
   const templateBundle = await resolveCliTemplate(templateId)
-  const format = outputFormat(outputPath)
   if (format !== "svg" && (options.textMode !== undefined || options.title !== undefined)) {
     throw invalidInput("--text-mode and --title can be used only with SVG output.")
   }

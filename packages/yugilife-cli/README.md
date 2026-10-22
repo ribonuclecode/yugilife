@@ -51,6 +51,39 @@ JPEG/WebP and defaults to 92. JPEG uses a white matte by default; `--background 
 selects another opaque matte. Raster options are rejected for SVG, and SVG-only `--text-mode` and
 `--title` options are rejected for raster output.
 
+The same render is available as a function. It takes the transport object directly (file paths
+resolve against `baseDirectory`, default the current directory) and returns the encoded bytes:
+
+```js
+import { writeFile } from "node:fs/promises"
+import { render } from "yugilife-cli"
+
+const { data, warnings } = await render(
+  { template: "card/series-10", card: { name: "Example Card" }, files: { artwork: "./art.png" } },
+  { format: "png", scale: 2 },
+)
+await writeFile("card.png", data)
+```
+
+Options mirror the CLI flags (`format`, `scale`/`width`/`height`, `quality` from 0 to 1,
+`backgroundColor`, `textMode`, `title`, `signal`). Each call launches and closes its own Chromium
+unless you pass a shared one from `launchBrowser()`; renders on it run one at a time, and Node
+stays alive until you close it:
+
+```js
+import { launchBrowser, render } from "yugilife-cli"
+
+const browser = await launchBrowser()
+try {
+  for (const input of inputs) {
+    const { data } = await render(input, { browser })
+    // ...
+  }
+} finally {
+  await browser.close()
+}
+```
+
 `render` is strictly local and never downloads or updates a template. `templates install` is the
 separate network-capable acquisition command. It requires an exact `id@version`, reads a declared
 size and SHA-256 entry from the configured registry catalog, verifies the downloaded artifact, validates
