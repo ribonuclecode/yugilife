@@ -9,7 +9,7 @@ import {
   resolveCardPresentation,
   walkLayers,
 } from "yugilife-core"
-import { DEFAULT_TEMPLATE } from "yugilife-templates"
+import { DEFAULT_TEMPLATE, TEMPLATE_CATALOG } from "yugilife-templates"
 
 import { selectedArtworkMask as selectArtworkMask } from "./artwork-mask-state"
 
@@ -19,6 +19,7 @@ import type {
   ArtworkTransform,
   CardData,
   CardTemplate,
+  CardTemplateBundle,
   ColorPresetCollection,
   PresentationOverrides,
   ResolvedCardPresentation,
@@ -44,8 +45,17 @@ export function isAutomaticTextFitLayer(layerId: string, template = editorTempla
   return template.cardFields.some((field) => field.automaticFitLayer === layerId)
 }
 
-export function createInitialCard() {
-  return createCardFromTemplate(editorTemplate)
+export function createInitialCard(template: CardTemplate = editorTemplate) {
+  return createCardFromTemplate(template)
+}
+
+/**
+ * The official bundle a document's template ID resolves to, or the default for user and unknown
+ * IDs. Catalog descriptors carry their template, presets, and manifest without downloading assets,
+ * so this is the synchronous editor contract for any official template.
+ */
+export function officialTemplateBundle(templateId: string): CardTemplateBundle {
+  return TEMPLATE_CATALOG.find(({ id }) => id === templateId) ?? DEFAULT_TEMPLATE
 }
 
 export interface ArtworkEditorConfig {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { deriveCardSemantics, resolveCardPresentation } from "yugilife-core"
+import { DEFAULT_TEMPLATE } from "yugilife-templates"
 
 import {
   artworkEditorConfig,
@@ -12,6 +13,7 @@ import {
   editorTemplate,
   getActivePresentationOverrides,
   hasArtworkCrop,
+  officialTemplateBundle,
   projectCardForEditorMode,
   projectCardForRender,
   resetArtworkCrop,
@@ -339,5 +341,20 @@ describe("editor card projections", () => {
     expect(layerIds).not.toEqual(
       expect.arrayContaining(["pendulumMonsterFrameTexture", "pendulumXyzFrameTexture"]),
     )
+  })
+})
+
+describe("official template contracts", () => {
+  it("resolves official templates by ID and falls back to the default otherwise", () => {
+    expect(officialTemplateBundle("card/dynamis-duel").manifest.id).toBe("card/dynamis-duel")
+    expect(officialTemplateBundle("card/series-10")).toBe(DEFAULT_TEMPLATE)
+    expect(officialTemplateBundle("user/example")).toBe(DEFAULT_TEMPLATE)
+    expect(officialTemplateBundle("card/unknown")).toBe(DEFAULT_TEMPLATE)
+  })
+
+  it("creates an initial card from any template", () => {
+    const card = createInitialCard(officialTemplateBundle("card/dynamis-duel").template)
+    expect(card).toMatchObject({ cardVariant: "effect", era: 1, signatureMove: false })
+    expect(card).not.toHaveProperty("linkArrows")
   })
 })

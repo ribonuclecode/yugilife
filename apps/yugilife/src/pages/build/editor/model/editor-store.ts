@@ -1,3 +1,4 @@
+import { DEFAULT_TEMPLATE } from "yugilife-templates"
 import { create } from "zustand"
 
 import {
@@ -5,9 +6,8 @@ import {
   createInitialLayerVisibility,
   createInitialPresetOverrides,
   editorLayerIds,
-  editorTemplateId,
-  editorTemplateVersion,
   isDefaultArtworkTransform,
+  officialTemplateBundle,
 } from "./editor-config"
 import { validateEditorDocumentState } from "./editor-document-validation"
 
@@ -15,6 +15,7 @@ import type { ArtworkMaskEffects, EditorDocumentState, EditorMode } from "./edit
 import type {
   ArtworkTransform,
   CardFieldValue,
+  CardTemplateBundle,
   TemplateId,
   TextTypographyPatch,
 } from "yugilife-core"
@@ -25,9 +26,11 @@ interface EditorState extends EditorDocumentState {
     patch: Readonly<Record<string, CardFieldValue>>,
     artworkMask: EditorDocumentState["artworkMask"],
   ) => void
-  replaceDocument: (document: EditorDocumentState) => void
-  reset: () => void
-  setAllLayers: (visible: boolean) => void
+  /** Validates against the document's own template; the bundle only short-circuits the lookup. */
+  replaceDocument: (document: EditorDocumentState, bundle?: EditorTemplateContract) => void
+  /** A blank card of the given template, or of the default template. */
+  reset: (bundle?: EditorTemplateContract) => void
+  setAllLayers: (visible: boolean, layerIds?: Iterable<string>) => void
   clearAllPresentationOverrides: () => void
   clearArtworkTransform: (transformId: string) => void
   clearArtworkMaskEffects: (maskField: string) => void
@@ -57,17 +60,25 @@ export type EditorTypographyPatch = {
   [Key in keyof TextTypographyPatch]?: TextTypographyPatch[Key] | undefined
 }
 
-export function createInitialEditorDocument(): EditorDocumentState {
+/** The parts of a template bundle the editor needs to start or validate a document. */
+export type EditorTemplateContract = Pick<
+  CardTemplateBundle,
+  "colorPresets" | "manifest" | "template"
+>
+
+export function createInitialEditorDocument(
+  bundle: Pick<CardTemplateBundle, "manifest" | "template"> = DEFAULT_TEMPLATE,
+): EditorDocumentState {
   return {
     artworkMask: { mode: "automatic", points: [] },
     artworkMaskEffects: {},
-    card: createInitialCard(),
+    card: createInitialCard(bundle.template),
     layers: createInitialLayerVisibility(),
     mode: "automatic" as const,
     presetOverrides: createInitialPresetOverrides(),
     presentationOverrides: {},
-    templateId: editorTemplateId,
-    templateVersion: editorTemplateVersion,
+    templateId: bundle.manifest.id,
+    templateVersion: bundle.manifest.version,
   }
 }
 
@@ -79,8 +90,9 @@ export const useEditorStore = create<EditorState>()((set) => ({
     })),
   applyCardPatchWithArtworkMask: (patch, artworkMask) =>
     set((state) => ({ artworkMask, card: { ...state.card, ...patch } })),
-  replaceDocument: (document) => set(validateEditorDocumentState(document)),
-  reset: () => set(createInitialEditorDocument()),
+  replaceDocument: (document, bundle = officialTemplateBundle(document.templateId)) =>
+    set(validateEditorDocumentState(document, bundle.template, bundle.colorPresets)),
+  reset: (bundle) => set(createInitialEditorDocument(bundle)),
   clearAllPresentationOverrides: () =>
     set({ artworkMaskEffects: {}, layers: {}, presetOverrides: {}, presentationOverrides: {} }),
   clearArtworkTransform: (transformId) =>
@@ -155,9 +167,9 @@ export const useEditorStore = create<EditorState>()((set) => ({
       else presentationOverrides.textTypography = nextTypography
       return { presentationOverrides }
     }),
-  setAllLayers: (visible) =>
+  setAllLayers: (visible, layerIds = editorLayerIds) =>
     set({
-      layers: Object.fromEntries([...editorLayerIds].map((id) => [id, visible])),
+      layers: Object.fromEntries([...layerIds].map((id) => [id, visible])),
     }),
   setArtworkTransform: (transformId, transform) =>
     set((state) => {

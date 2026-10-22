@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import { deriveCardSemantics, resolveCardPresentation } from "yugilife-core"
+import { DEFAULT_TEMPLATE_ID, getOfficialTemplate } from "yugilife-templates"
 
 import { editorTemplate } from "./editor-config"
-import { useEditorStore } from "./editor-store"
+import { createInitialEditorDocument, useEditorStore } from "./editor-store"
 
 describe("editor presentation override actions", () => {
   beforeEach(() => {
@@ -159,5 +160,45 @@ describe("editor presentation override actions", () => {
       .getState()
       .setTextTypography("description", base?.styleId ?? "extra-deck", { fitBlocks: undefined })
     expect(useEditorStore.getState().presentationOverrides).toEqual({})
+  })
+})
+
+describe("editor store template contracts", () => {
+  const dynamis = getOfficialTemplate("card/dynamis-duel")
+
+  beforeEach(() => {
+    useEditorStore.getState().reset()
+  })
+
+  it("starts a blank card of the default template unless told otherwise", () => {
+    expect(useEditorStore.getState().templateId).toBe(DEFAULT_TEMPLATE_ID)
+    expect(useEditorStore.getState().card).toHaveProperty("rank")
+
+    useEditorStore.getState().reset(dynamis)
+
+    expect(useEditorStore.getState()).toMatchObject({
+      templateId: "card/dynamis-duel",
+      templateVersion: dynamis.version,
+    })
+    expect(useEditorStore.getState().card).toMatchObject({ aether: false, era: 1, level: 7 })
+    expect(useEditorStore.getState().card).not.toHaveProperty("rank")
+  })
+
+  it("validates a replaced document against its own template", () => {
+    const document = createInitialEditorDocument(dynamis)
+
+    useEditorStore.getState().replaceDocument({ ...document, layers: { levelPlate: false } })
+    expect(useEditorStore.getState().layers).toEqual({ levelPlate: false })
+
+    expect(() =>
+      useEditorStore
+        .getState()
+        .replaceDocument({ ...document, card: { ...document.card, cardVariant: "xyz" } }),
+    ).toThrow()
+  })
+
+  it("sets visibility for the layers it is given rather than the default template's", () => {
+    useEditorStore.getState().setAllLayers(false, ["levelPlate", "level"])
+    expect(useEditorStore.getState().layers).toEqual({ level: false, levelPlate: false })
   })
 })
