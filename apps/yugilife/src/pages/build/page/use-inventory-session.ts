@@ -5,7 +5,10 @@ import { parseRichText, plainTextFromRichText } from "yugilife-core"
 
 import { errorMessage } from "@/lib/utils"
 
-import { migrateInventoryCardToCurrentTemplate } from "../../inventory/model/inventory-card-migration"
+import {
+  migrateInventoryCardToCurrentTemplate,
+  resolveCardTemplateBundle,
+} from "../../inventory/model/inventory-card-migration"
 import { inventoryPreviewMatchesCard } from "../../inventory/model/inventory-preview"
 import {
   processedInventoryMask,
@@ -72,7 +75,7 @@ interface InventorySessionInput {
   readonly onCardOpening: () => void
   readonly preparedTextures: PreparedTextures | undefined
   readonly processedMaskForDocument: (document: EditorDocumentState) => Promise<Blob | undefined>
-  readonly replaceDocument: (document: EditorDocumentState) => void
+  readonly replaceDocument: (document: EditorDocumentState, bundle?: CardTemplateBundle) => void
   readonly setInventoryBusy: (busy: boolean) => void
   readonly templateBundle: CardTemplateBundle | undefined
 }
@@ -126,10 +129,11 @@ export function useInventorySession({
           if (!saved) throw new Error("This inventory card does not exist.")
           const loaded = await migrateInventoryCardToCurrentTemplate(saved)
           const storedPreview = await readInventoryPreview(saved.id)
+          const bundle = await resolveCardTemplateBundle(loaded.document.templateId)
           if (cancelled) return
           inventoryCard.current = loaded
           writeActiveInventoryCardId(loaded.id)
-          replaceDocument(loaded.document)
+          replaceDocument(loaded.document, bundle)
           // A migrated card or a stale preview stays visibly unsaved until its snapshot commits.
           const owesCommit =
             loaded !== saved ||

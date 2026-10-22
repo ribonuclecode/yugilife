@@ -9,14 +9,13 @@ import {
   resolveCardPresentation,
   validateCardData,
 } from "yugilife-core"
+import { DEFAULT_TEMPLATE } from "yugilife-templates"
 import { useShallow } from "zustand/react/shallow"
 
 import { useCardCatalog } from "../card-catalog/model/use-card-catalog"
 import { artworkMaskPending } from "../editor/model/artwork-mask-state"
 import {
   editorCardFieldsForMode,
-  editorColorPresets,
-  editorTemplate,
   getActivePresentationOverrides,
   isAutomaticTextFitLayer,
   paintableTextStyles,
@@ -25,6 +24,7 @@ import {
 } from "../editor/model/editor-config"
 import { useEditorStore } from "../editor/model/editor-store"
 import { useReferenceImages } from "../references/reference-library"
+import { templatesShareEditorContract } from "../templates/template-document-io"
 import { templateBundleMatchesVersion } from "../templates/template-storage"
 
 import { useDownloads } from "./downloads"
@@ -100,13 +100,19 @@ export function useBuildController(cardId: string) {
 
   const activation = useTemplateActivation({
     inventoryBusy,
+    resetCard: actions.reset,
     setTemplateIdentity: actions.setTemplateIdentity,
     storedTemplateId: currentDocument.templateId,
   })
   const templateDocuments = useTemplateDocuments(activation, download)
-  const { templateBundle } = activation
-  const activeEditorTemplate = templateBundle?.template ?? editorTemplate
-  const activeEditorColorPresets = templateBundle?.colorPresets ?? editorColorPresets
+  const { documentBundle, templateBundle } = activation
+  const activeEditorTemplate = documentBundle.template
+  const activeEditorColorPresets = documentBundle.colorPresets
+  /** The official card catalog writes Series 10 fields, so it only serves that editor contract. */
+  const cardCatalogAvailable = useMemo(
+    () => templatesShareEditorContract(documentBundle, DEFAULT_TEMPLATE),
+    [documentBundle],
+  )
 
   // The editor document outlives the route; process masks only once the requested card hydrated.
   const maskPreview = useArtworkMaskPreview({
@@ -149,14 +155,14 @@ export function useBuildController(cardId: string) {
   const cardExport = useCardExport({
     currentDocument,
     download,
-    onDocumentImported: (document) => {
-      actions.replaceDocument(document)
+    onDocumentImported: (document, bundle) => {
+      actions.replaceDocument(document, bundle)
       openTemplate(document.templateId)
     },
     plainCardName,
     preparedTextures: activation.preparedTextures,
     processedMaskForDocument: maskPreview.processedMaskForDocument,
-    syncTemplateStorageMode: activation.syncTemplateStorageMode,
+    storedTemplates: activation.storedTemplates,
     template: activeEditorTemplate,
     templateBundle,
   })
@@ -263,6 +269,13 @@ export function useBuildController(cardId: string) {
   )
 
   function selectTemplate(templateId: string) {
+    if (
+      inventory.hasUnsavedChanges &&
+      !activation.selectionKeepsCard(templateId) &&
+      !window.confirm("Switching templates replaces the current card with a blank one. Continue?")
+    ) {
+      return
+    }
     templateDocuments.closeEditor()
     activation.selectTemplate(templateId)
   }
@@ -272,10 +285,7 @@ export function useBuildController(cardId: string) {
   }
 
   function resetEditor() {
-    actions.reset()
-    if (templateBundle) {
-      actions.setTemplateIdentity(templateBundle.manifest.id, templateBundle.manifest.version)
-    }
+    actions.reset(documentBundle)
   }
 
   function applyCatalogCardPatch(
@@ -325,6 +335,7 @@ export function useBuildController(cardId: string) {
     cancelTemplateEdit: templateDocuments.cancelTemplateEdit,
     card,
     cardCatalog,
+    cardCatalogAvailable,
     cardFields,
     clearActiveOverride,
     clearAllPresentationOverrides: actions.clearAllPresentationOverrides,
@@ -361,7 +372,11 @@ export function useBuildController(cardId: string) {
     selectedTemplateIsUser: activation.selectedTemplateIsUser,
     selectedTemplateName: activation.selectedTemplateName,
     selectedTemplateVersion: activation.selectedTemplateVersion,
-    setAllLayers: actions.setAllLayers,
+    setAllLayers: (visible: boolean) =>
+      actions.setAllLayers(
+        visible,
+        activeLayerGroups.flatMap((group) => group.layers.map(({ id }) => id)),
+      ),
     setArtworkMask: actions.setArtworkMask,
     setArtworkMaskEffects: actions.setArtworkMaskEffects,
     setArtworkTransform: actions.setArtworkTransform,

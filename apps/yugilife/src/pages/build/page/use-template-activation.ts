@@ -5,7 +5,7 @@ import { DEFAULT_TEMPLATE_ID, getOfficialTemplate, TEMPLATE_CATALOG } from "yugi
 import { errorMessage } from "@/lib/utils"
 
 import { listInventoryCards } from "../../inventory/persistence/inventory-storage"
-import { editorTemplateVersion } from "../editor/model/editor-config"
+import { editorTemplateVersion, officialTemplateBundle } from "../editor/model/editor-config"
 import {
   acquirePreparedTextures,
   preparedTexturesForBundle,
@@ -13,6 +13,7 @@ import {
 } from "../templates/prepare-template-textures"
 import {
   templateEditorCompatibility,
+  templatesShareEditorContract,
   validateTemplateBundle,
 } from "../templates/template-document-io"
 import {
@@ -36,7 +37,7 @@ import type {
 } from "../templates/template-storage"
 import type { CardTemplateBundle } from "yugilife-core"
 
-export const editorTemplateCatalog = TEMPLATE_CATALOG.filter(({ id }) => id === DEFAULT_TEMPLATE_ID)
+export const editorTemplateCatalog = TEMPLATE_CATALOG
 
 function assertEditorCompatible(bundle: CardTemplateBundle, subject: string) {
   const compatibility = templateEditorCompatibility(bundle.template, bundle.colorPresets)
@@ -56,12 +57,14 @@ function isMissingUserTemplate(templateId: string, templates: readonly StoredTem
 
 interface TemplateActivationInput {
   readonly inventoryBusy: boolean
+  readonly resetCard: (bundle: CardTemplateBundle) => void
   readonly setTemplateIdentity: (id: string, version: string) => void
   readonly storedTemplateId: string
 }
 
 export function useTemplateActivation({
   inventoryBusy,
+  resetCard,
   setTemplateIdentity,
   storedTemplateId,
 }: TemplateActivationInput) {
@@ -85,7 +88,10 @@ export function useTemplateActivation({
 
   const requestedTemplateId =
     selectedTemplateIdOverride ??
-    (storedTemplateId.startsWith("user/") ? storedTemplateId : DEFAULT_TEMPLATE_ID)
+    (storedTemplateId.startsWith("user/") ||
+    editorTemplateCatalog.some(({ id }) => id === storedTemplateId)
+      ? storedTemplateId
+      : DEFAULT_TEMPLATE_ID)
   const selectedTemplateId =
     templateStorageReady && isMissingUserTemplate(requestedTemplateId, storedTemplates)
       ? DEFAULT_TEMPLATE_ID
@@ -140,15 +146,41 @@ export function useTemplateActivation({
     }
   }, [applyStorageSnapshot, reportStorageError])
 
+  /**
+   * The template the document belongs to, whether or not its bundle has loaded yet. Official
+   * descriptors are complete without their assets, so a card always shows its own fields.
+   */
+  const documentBundle = useMemo(
+    () => templateBundle ?? officialTemplateBundle(storedTemplateId),
+    [storedTemplateId, templateBundle],
+  )
+
+  /**
+   * Whether the current card survives activating `target`: it does when the target is the card's
+   * own template or shares its editor contract (a user copy of the same family). Any other switch
+   * starts a blank card of the new template, because its fields and layers are different data.
+   */
+  const switchKeepsCard = useCallback(
+    (target: CardTemplateBundle) => {
+      if (target.manifest.id === storedTemplateId) return true
+      const source = storedTemplateId.startsWith("user/")
+        ? (storedTemplates.find(({ id }) => id === storedTemplateId)?.bundle ?? documentBundle)
+        : documentBundle
+      return templatesShareEditorContract(source, target)
+    },
+    [documentBundle, storedTemplateId, storedTemplates],
+  )
+
   const activate = useCallback(
     (bundle: CardTemplateBundle, sizeBytes?: number) => {
       if (sizeBytes !== undefined) {
         setTemplateLoadProgress({ loaded: sizeBytes, phase: "ready", total: sizeBytes })
       }
       setTemplateBundle(bundle)
-      setTemplateIdentity(bundle.manifest.id, bundle.manifest.version)
+      if (switchKeepsCard(bundle)) setTemplateIdentity(bundle.manifest.id, bundle.manifest.version)
+      else resetCard(bundle)
     },
-    [setTemplateIdentity],
+    [resetCard, setTemplateIdentity, switchKeepsCard],
   )
 
   const loadSelectedTemplate = useCallback(
@@ -309,8 +341,15 @@ export function useTemplateActivation({
     setTemplateLoadPaused(false)
     clearTemplate()
     automaticTemplateRestore.current = undefined
-    resetTemplateIdentity()
     setSelectedTemplateId(templateId)
+  }
+
+  /** Whether selecting `templateId` keeps the current card instead of starting a blank one. */
+  function selectionKeepsCard(templateId: string) {
+    return switchKeepsCard(
+      storedTemplates.find(({ id }) => id === templateId)?.bundle ??
+        officialTemplateBundle(templateId),
+    )
   }
 
   async function removeSelectedTemplate() {
@@ -354,6 +393,7 @@ export function useTemplateActivation({
     activate,
     clearTemplate,
     deactivate,
+    documentBundle,
     loadSelectedTemplate,
     openTemplate,
     originStorage,
@@ -362,6 +402,7 @@ export function useTemplateActivation({
     removeSelectedTemplate,
     resetTemplateIdentity,
     selectTemplate,
+    selectionKeepsCard,
     selectedTemplateId,
     selectedTemplateIsUser,
     selectedTemplateName,
@@ -370,7 +411,6 @@ export function useTemplateActivation({
     setTemplateLoadError,
     storedTemplate,
     storedTemplates,
-    syncTemplateStorageMode: () => setTemplateStorageMode(getTemplateStorageMode()),
     templateBundle,
     templateBundleMatchesSelection: templateBundleMatchesVersion(
       templateBundle,

@@ -52,3 +52,11 @@ Feature: Smoke
   Scenario: Salamangreat preview uses outlined text
     Given I open the Salamangreat card builder
     Then the Salamangreat preview uses outlined glyphs
+
+  @timeout:90000
+  Scenario: Another official template can drive the card builder
+    Given I open the card builder
+    When I switch to the "Dynamis Duel" template
+    Then the preview renders the "card/dynamis-duel" template
+    And the "Era" card field is visible
+    And the "Rank" card field is absent

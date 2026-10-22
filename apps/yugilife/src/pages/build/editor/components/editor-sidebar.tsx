@@ -92,6 +92,7 @@ export function EditorSidebar({
     automaticCardFields,
     card,
     cardCatalog,
+    cardCatalogAvailable,
     cardFields,
     clearActiveOverride,
     clearAllPresentationOverrides,
@@ -324,11 +325,13 @@ export function EditorSidebar({
       )}
 
       <EditorSection title="Card details" description="Everything printed on the card.">
-        <CardCatalogAutocomplete
-          applyPatch={applyCatalogCardPatch}
-          catalog={cardCatalog}
-          onArtworkSetChange={acceptCatalogArtworkSet}
-        />
+        {cardCatalogAvailable && (
+          <CardCatalogAutocomplete
+            applyPatch={applyCatalogCardPatch}
+            catalog={cardCatalog}
+            onArtworkSetChange={acceptCatalogArtworkSet}
+          />
+        )}
         <div className="grid grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2">
           {orderedAutomaticFields.map(renderField)}
         </div>

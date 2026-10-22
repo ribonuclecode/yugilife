@@ -49,7 +49,6 @@ export function useTemplateDocuments(
     await storeTemplate(copy, "user")
     await activation.refreshTemplateStorage()
     activation.openTemplate(copy.manifest.id)
-    activation.resetTemplateIdentity()
     return copy
   }
 

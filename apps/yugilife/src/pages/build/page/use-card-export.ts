@@ -4,19 +4,17 @@ import { exportCardToImage, exportCardToSvg, resolveRasterOutputDimensions } fro
 
 import { errorMessage } from "@/lib/utils"
 
-import { migrateInventoryCardDocument } from "../../inventory/model/inventory-card-migration"
 import { projectCardForRender } from "../editor/model/editor-config"
-import { createInitialEditorDocument } from "../editor/model/editor-store"
 import {
   maximumEditorDocumentBytes,
   parseEditorDocument,
   serializeEditorDocument,
 } from "../editor/persistence/editor-document-io"
-import { readStoredTemplate } from "../templates/template-storage"
 
 import { readSelectedFile, safeFileName } from "./downloads"
 
 import type { EditorDocumentState } from "../editor/model/editor-document"
+import type { StoredTemplateRecord } from "../templates/template-storage"
 import type { ChangeEvent } from "react"
 import type {
   CardTemplate,
@@ -43,11 +41,14 @@ function rasterSizeForChoice(choice: RasterSizeChoice, customDimension: string) 
 interface CardExportInput {
   readonly currentDocument: EditorDocumentState
   readonly download: (blob: Blob, fileName: string) => void
-  readonly onDocumentImported: (document: EditorDocumentState) => void
+  readonly onDocumentImported: (
+    document: EditorDocumentState,
+    bundle: CardTemplateBundle | undefined,
+  ) => void
   readonly plainCardName: string
   readonly preparedTextures: PreparedTextures | undefined
   readonly processedMaskForDocument: (document: EditorDocumentState) => Promise<Blob | undefined>
-  readonly syncTemplateStorageMode: () => void
+  readonly storedTemplates: readonly StoredTemplateRecord[]
   readonly template: CardTemplate
   readonly templateBundle: CardTemplateBundle | undefined
 }
@@ -59,7 +60,7 @@ export function useCardExport({
   plainCardName,
   preparedTextures,
   processedMaskForDocument,
-  syncTemplateStorageMode,
+  storedTemplates,
   template,
   templateBundle,
 }: CardExportInput) {
@@ -151,27 +152,16 @@ export function useCardExport({
     await transferDocument(async () => {
       const file = readSelectedFile(event, maximumEditorDocumentBytes, "Editor documents")
       if (!file) return
-      let document = parseEditorDocument(await file.text())
-      if (document.templateId.startsWith("user/")) {
-        const stored = await readStoredTemplate(document.templateId)
-        syncTemplateStorageMode()
-        if (!stored || stored.source !== "user") {
-          throw new Error(
-            `The editor document requires user template "${document.templateId}", which is not stored in this browser. Import the template first.`,
-          )
-        }
-        document = migrateInventoryCardDocument(
-          document,
-          {
-            ...createInitialEditorDocument(),
-            templateId: stored.id,
-            templateVersion: stored.version,
-          },
-          stored.bundle.template,
-          stored.bundle.colorPresets,
+      const resolveUserTemplate = (templateId: string) =>
+        storedTemplates.find(({ id, source }) => id === templateId && source === "user")?.bundle
+      const document = parseEditorDocument(await file.text(), resolveUserTemplate)
+      const userBundle = resolveUserTemplate(document.templateId)
+      if (document.templateId.startsWith("user/") && !userBundle) {
+        throw new Error(
+          `The editor document requires user template "${document.templateId}", which is not stored in this browser. Import the template first.`,
         )
       }
-      onDocumentImported(document)
+      onDocumentImported(document, userBundle)
     })
   }
 

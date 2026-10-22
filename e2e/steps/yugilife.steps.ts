@@ -147,3 +147,26 @@ Then("the inventory has {int} cards", async ({ page }, count: number) => {
 function cardName(page: Page) {
   return page.getByRole("textbox", { exact: true, name: "Name" })
 }
+
+When("I switch to the {string} template", async ({ page }, name: string) => {
+  // Switching away from a card with unsaved edits asks first; a fresh builder card has none.
+  page.once("dialog", (dialog) => void dialog.accept())
+  await page.getByRole("tab", { exact: true, name: "Template" }).click()
+  await page.getByLabel("Active template").click()
+  await page.getByRole("option", { exact: true, name }).click()
+})
+
+Then("the preview renders the {string} template", async ({ page }, templateId: string) => {
+  await expect(page.locator(`[data-template="${templateId}"] svg`).first()).toBeVisible({
+    timeout: 60_000,
+  })
+})
+
+Then("the {string} card field is visible", async ({ page }, label: string) => {
+  await page.getByRole("tab", { exact: true, name: "Edit" }).click()
+  await expect(page.getByLabel(label, { exact: true }).first()).toBeVisible()
+})
+
+Then("the {string} card field is absent", async ({ page }, label: string) => {
+  await expect(page.getByLabel(label, { exact: true })).toHaveCount(0)
+})
