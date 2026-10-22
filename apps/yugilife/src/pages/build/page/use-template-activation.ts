@@ -326,15 +326,11 @@ export function useTemplateActivation({
     setTemplateLoadProgress(undefined)
   }
 
-  function openTemplate(templateId: string) {
-    setSelectedTemplateId(templateId)
-    clearTemplate()
-  }
-
   function resetTemplateIdentity() {
     setTemplateIdentity(DEFAULT_TEMPLATE_ID, editorTemplateVersion)
   }
 
+  /** Cancels any load in flight: it would resolve against the document it started for. */
   function selectTemplate(templateId: string) {
     templateLoadController.current?.abort()
     setTemplateLoading(false)
@@ -395,7 +391,6 @@ export function useTemplateActivation({
     deactivate,
     documentBundle,
     loadSelectedTemplate,
-    openTemplate,
     originStorage,
     preparedTextures,
     refreshTemplateStorage,

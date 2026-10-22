@@ -48,7 +48,7 @@ export function useTemplateDocuments(
     const copy = makeUserTemplateCopy(bundle)
     await storeTemplate(copy, "user")
     await activation.refreshTemplateStorage()
-    activation.openTemplate(copy.manifest.id)
+    activation.selectTemplate(copy.manifest.id)
     return copy
   }
 

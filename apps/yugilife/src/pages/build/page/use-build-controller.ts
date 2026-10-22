@@ -129,7 +129,7 @@ export function useBuildController(cardId: string) {
     template: activeEditorTemplate,
   })
 
-  const { openTemplate, setSelectedTemplateId } = activation
+  const { setSelectedTemplateId } = activation
   const onCardOpened = useCallback(
     (document: EditorDocumentState) => setSelectedTemplateId(document.templateId),
     [setSelectedTemplateId],
@@ -157,7 +157,7 @@ export function useBuildController(cardId: string) {
     download,
     onDocumentImported: (document, bundle) => {
       actions.replaceDocument(document, bundle)
-      openTemplate(document.templateId)
+      activation.selectTemplate(document.templateId)
     },
     plainCardName,
     preparedTextures: activation.preparedTextures,
