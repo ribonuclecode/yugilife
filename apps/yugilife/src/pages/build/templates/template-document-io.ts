@@ -5,8 +5,7 @@ import {
   validateTemplateManifest,
   walkLayers,
 } from "yugilife-core"
-
-import { editorColorPresets, editorTemplate } from "../editor/model/editor-config"
+import { DEFAULT_TEMPLATE, TEMPLATE_CATALOG } from "yugilife-templates"
 
 import type {
   AssetSource,
@@ -38,7 +37,17 @@ const coreLayerKinds = new Set([
 const rasterRenderers = new Set(["color-texture", "color-texture-bevel"])
 const canvasRenderers = new Set(["bevel"])
 const userTemplateIdPattern = /^user\/[a-zA-Z0-9._-]+$/
-const editorContractTemplate = validateCardTemplate(editorTemplate)
+/**
+ * Every official template is an editor contract a user template may match. The default comes first
+ * so an incompatible template is explained against the editor people see by default.
+ */
+const officialContracts = [
+  DEFAULT_TEMPLATE,
+  ...TEMPLATE_CATALOG.filter((candidate) => candidate !== DEFAULT_TEMPLATE),
+].map(({ colorPresets, template }) => ({
+  colorPresets,
+  template: validateCardTemplate(template),
+}))
 
 export interface TemplateSource {
   colorPresets: ColorPresetCollection
@@ -489,13 +498,19 @@ function presetSurface(template: CardTemplate, colorPresets: ColorPresetCollecti
   }))
 }
 
-export function templateEditorCompatibility(
+interface EditorContract {
+  colorPresets: ColorPresetCollection
+  template: CardTemplate
+}
+
+function compareEditorContract(
   template: CardTemplate,
   colorPresets: ColorPresetCollection,
+  contract: EditorContract,
 ) {
   if (
     stableJson(editorCardFieldSurface(template)) !==
-    stableJson(editorCardFieldSurface(editorContractTemplate))
+    stableJson(editorCardFieldSurface(contract.template))
   ) {
     return {
       compatible: false as const,
@@ -503,8 +518,7 @@ export function templateEditorCompatibility(
     }
   }
   if (
-    stableJson(editorLayerSurface(template)) !==
-    stableJson(editorLayerSurface(editorContractTemplate))
+    stableJson(editorLayerSurface(template)) !== stableJson(editorLayerSurface(contract.template))
   ) {
     return {
       compatible: false as const,
@@ -513,7 +527,7 @@ export function templateEditorCompatibility(
   }
   if (
     stableJson(template.masks?.map(({ id }) => id) ?? []) !==
-    stableJson(editorContractTemplate.masks?.map(({ id }) => id) ?? [])
+    stableJson(contract.template.masks?.map(({ id }) => id) ?? [])
   ) {
     return {
       compatible: false as const,
@@ -522,7 +536,7 @@ export function templateEditorCompatibility(
   }
   if (
     stableJson(presetSurface(template, colorPresets)) !==
-    stableJson(presetSurface(editorContractTemplate, editorColorPresets))
+    stableJson(presetSurface(contract.template, contract.colorPresets))
   ) {
     return {
       compatible: false as const,
@@ -530,4 +544,26 @@ export function templateEditorCompatibility(
     }
   }
   return { compatible: true as const }
+}
+
+/** A template can drive the editor when it matches any official template's editor contract. */
+export function templateEditorCompatibility(
+  template: CardTemplate,
+  colorPresets: ColorPresetCollection,
+) {
+  const results = officialContracts.map((contract) =>
+    compareEditorContract(template, colorPresets, contract),
+  )
+  return results.find((result) => result.compatible) ?? results[0]!
+}
+
+/** Whether two bundles expose the same editor contract, so a card can move between them intact. */
+export function templatesShareEditorContract(
+  source: Pick<CardTemplateBundle, "colorPresets" | "template">,
+  target: Pick<CardTemplateBundle, "colorPresets" | "template">,
+) {
+  return compareEditorContract(source.template, source.colorPresets, {
+    colorPresets: target.colorPresets,
+    template: target.template,
+  }).compatible
 }
