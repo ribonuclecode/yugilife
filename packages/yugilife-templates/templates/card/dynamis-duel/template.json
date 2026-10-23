@@ -22,29 +22,29 @@
       {
         "id": "large",
         "label": "Large",
-        "fontSize": 30,
-        "lineHeight": 30,
+        "fontSize": 31,
+        "lineHeight": 31,
         "maxLines": 5
       },
       {
         "id": "medium",
         "label": "Medium",
-        "fontSize": 24.4,
-        "lineHeight": 25,
+        "fontSize": 26,
+        "lineHeight": 26.5,
         "maxLines": 6
       },
       {
         "id": "small",
         "label": "Small",
-        "fontSize": 21,
-        "lineHeight": 22,
+        "fontSize": 22.5,
+        "lineHeight": 23,
         "maxLines": 7
       },
       {
         "id": "extra-small",
         "label": "Extra Small",
-        "fontSize": 17,
-        "lineHeight": 16.67,
+        "fontSize": 18.5,
+        "lineHeight": 19,
         "maxLines": 9
       }
     ],
@@ -388,38 +388,46 @@
       }
     },
     {
+      "id": "frameOuterLine",
+      "kind": "svg",
+      "label": "Inner frame black border",
+      "group": "Artwork and frames",
+      "editorVisible": false,
+      "element": {
+        "tag": "rect",
+        "attributes": {
+          "x": 23,
+          "y": 23,
+          "width": 767,
+          "height": 1138,
+          "fill": "#050505"
+        }
+      }
+    },
+    {
       "id": "frameTexture",
       "kind": "raster",
       "label": "Frame texture",
       "group": "Artwork and frames",
-      "renderer": "color-texture",
+      "renderer": "color-texture-bevel",
       "assetId": "card.dynamis-duel.frame-texture",
       "region": {
-        "x": 28,
-        "y": 28,
-        "width": 757,
-        "height": 1128
+        "x": 26,
+        "y": 26,
+        "width": 761,
+        "height": 1132
       },
       "presetTarget": "frame",
-      "defaultPreset": "dynamis-effect-frame"
-    },
-    {
-      "id": "nameBar",
-      "kind": "svg",
-      "label": "Name bar",
-      "group": "Artwork and frames",
-      "element": {
-        "tag": "rect",
-        "attributes": {
-          "x": 45,
-          "y": 45,
-          "width": 620,
-          "height": 72,
-          "rx": 6,
-          "fill": "#f3ecd8",
-          "stroke": "#2a2a2a",
-          "stroke-width": 2
-        }
+      "defaultPreset": "dynamis-effect-frame",
+      "options": {
+        "thickness": {
+          "top": 3,
+          "right": 3,
+          "bottom": 3,
+          "left": 3
+        },
+        "highlightColor": "#ffffff52",
+        "shadowColor": "#00000066"
       }
     },
     {
@@ -447,15 +455,15 @@
         }
       ],
       "position": {
-        "x": 60,
-        "y": 97
+        "x": 42,
+        "y": 93
       },
       "typography": {
-        "fill": "#111111",
+        "fill": "#080808",
         "fontFamily": "MatrixRegularSmallCaps",
-        "fontSize": 60,
+        "fontSize": 76,
         "fit": "scale-x",
-        "maxWidth": 596
+        "maxWidth": 612
       }
     },
     {
@@ -466,10 +474,406 @@
       "field": "artwork",
       "transformId": "artwork",
       "region": {
-        "x": 42,
-        "y": 124,
-        "width": 729,
-        "height": 700
+        "x": 40,
+        "y": 119,
+        "width": 733,
+        "height": 732
+      }
+    },
+    {
+      "id": "frameSurfaceNormal",
+      "kind": "svg",
+      "label": "Normal frame surface",
+      "group": "Artwork and frames",
+      "defaultVisible": false,
+      "editorVisible": false,
+      "element": {
+        "tag": "g",
+        "children": [
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "648,116 776,116 776,166 696,166",
+              "fill": "#c48e3c"
+            }
+          },
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "38,802 116,802 149,853 38,853",
+              "fill": "#c48e3c"
+            }
+          },
+          {
+            "tag": "rect",
+            "attributes": {
+              "x": 52,
+              "y": 909,
+              "width": 709,
+              "height": 193,
+              "fill": "#cfc4b2"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "frameSurfaceEffect",
+      "kind": "svg",
+      "label": "Effect frame surface",
+      "group": "Artwork and frames",
+      "defaultVisible": false,
+      "editorVisible": false,
+      "element": {
+        "tag": "g",
+        "children": [
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "648,116 776,116 776,166 696,166",
+              "fill": "#c2602d"
+            }
+          },
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "38,802 116,802 149,853 38,853",
+              "fill": "#c2602d"
+            }
+          },
+          {
+            "tag": "rect",
+            "attributes": {
+              "x": 52,
+              "y": 909,
+              "width": 709,
+              "height": 193,
+              "fill": "#ffd5b6"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "frameSurfaceRitual",
+      "kind": "svg",
+      "label": "Ritual frame surface",
+      "group": "Artwork and frames",
+      "defaultVisible": false,
+      "editorVisible": false,
+      "element": {
+        "tag": "g",
+        "children": [
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "648,116 776,116 776,166 696,166",
+              "fill": "#2e5083"
+            }
+          },
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "38,802 116,802 149,853 38,853",
+              "fill": "#2e5083"
+            }
+          },
+          {
+            "tag": "rect",
+            "attributes": {
+              "x": 52,
+              "y": 909,
+              "width": 709,
+              "height": 193,
+              "fill": "#b5c0d2"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "frameSurfaceFusion",
+      "kind": "svg",
+      "label": "Fusion frame surface",
+      "group": "Artwork and frames",
+      "defaultVisible": false,
+      "editorVisible": false,
+      "element": {
+        "tag": "g",
+        "children": [
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "648,116 776,116 776,166 696,166",
+              "fill": "#632b7e"
+            }
+          },
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "38,802 116,802 149,853 38,853",
+              "fill": "#632b7e"
+            }
+          },
+          {
+            "tag": "rect",
+            "attributes": {
+              "x": 52,
+              "y": 909,
+              "width": 709,
+              "height": 193,
+              "fill": "#d7c0e1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "frameSurfaceUltimatch",
+      "kind": "svg",
+      "label": "Ultimatch frame surface",
+      "group": "Artwork and frames",
+      "defaultVisible": false,
+      "editorVisible": false,
+      "element": {
+        "tag": "g",
+        "children": [
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "648,116 776,116 776,166 696,166",
+              "fill": "#2b5a1f"
+            }
+          },
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "38,802 116,802 149,853 38,853",
+              "fill": "#2b5a1f"
+            }
+          },
+          {
+            "tag": "rect",
+            "attributes": {
+              "x": 52,
+              "y": 909,
+              "width": 709,
+              "height": 193,
+              "fill": "#b2c2a5"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "frameSurfaceTransformation",
+      "kind": "svg",
+      "label": "Transformation frame surface",
+      "group": "Artwork and frames",
+      "defaultVisible": false,
+      "editorVisible": false,
+      "element": {
+        "tag": "g",
+        "children": [
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "648,116 776,116 776,166 696,166",
+              "fill": "#d62a2a"
+            }
+          },
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "38,802 116,802 149,853 38,853",
+              "fill": "#d62a2a"
+            }
+          },
+          {
+            "tag": "rect",
+            "attributes": {
+              "x": 52,
+              "y": 909,
+              "width": 709,
+              "height": 193,
+              "fill": "#ba9a9a"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "frameSurfaceGod",
+      "kind": "svg",
+      "label": "God frame surface",
+      "group": "Artwork and frames",
+      "defaultVisible": false,
+      "editorVisible": false,
+      "element": {
+        "tag": "g",
+        "children": [
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "648,116 776,116 776,166 696,166",
+              "fill": "#244178"
+            }
+          },
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "38,802 116,802 149,853 38,853",
+              "fill": "#244178"
+            }
+          },
+          {
+            "tag": "rect",
+            "attributes": {
+              "x": 52,
+              "y": 909,
+              "width": 709,
+              "height": 193,
+              "fill": "#b5c0d2"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "frameSurfaceSpell",
+      "kind": "svg",
+      "label": "Spell frame surface",
+      "group": "Artwork and frames",
+      "defaultVisible": false,
+      "editorVisible": false,
+      "element": {
+        "tag": "g",
+        "children": [
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "648,116 776,116 776,166 696,166",
+              "fill": "#178989"
+            }
+          },
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "38,802 116,802 149,853 38,853",
+              "fill": "#178989"
+            }
+          },
+          {
+            "tag": "rect",
+            "attributes": {
+              "x": 52,
+              "y": 909,
+              "width": 709,
+              "height": 193,
+              "fill": "#def3f2"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "frameSurfaceTrap",
+      "kind": "svg",
+      "label": "Trap frame surface",
+      "group": "Artwork and frames",
+      "defaultVisible": false,
+      "editorVisible": false,
+      "element": {
+        "tag": "g",
+        "children": [
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "648,116 776,116 776,166 696,166",
+              "fill": "#d45386"
+            }
+          },
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "38,802 116,802 149,853 38,853",
+              "fill": "#d45386"
+            }
+          },
+          {
+            "tag": "rect",
+            "attributes": {
+              "x": 52,
+              "y": 909,
+              "width": 709,
+              "height": 193,
+              "fill": "#f5d7e6"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "artworkFrameBevel",
+      "kind": "svg",
+      "label": "Artwork beveled frame",
+      "group": "Artwork and frames",
+      "editorVisible": false,
+      "element": {
+        "tag": "g",
+        "children": [
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "40,119 648,119 696,166 773,166 773,851 149,851 116,802 40,802",
+              "fill": "none",
+              "stroke": "#000000",
+              "stroke-width": 6,
+              "stroke-opacity": 0.45,
+              "stroke-linejoin": "miter"
+            }
+          },
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "39,118 649,118 696,165 774,165 774,852 148,852 116,803 39,803",
+              "fill": "none",
+              "stroke": "#070707",
+              "stroke-width": 2.5,
+              "stroke-linejoin": "miter"
+            }
+          },
+          {
+            "tag": "polyline",
+            "attributes": {
+              "points": "148,854 776,854 776,165",
+              "fill": "none",
+              "stroke": "#ffffff",
+              "stroke-width": 1.5,
+              "stroke-opacity": 0.35
+            }
+          },
+          {
+            "tag": "polyline",
+            "attributes": {
+              "points": "37,803 37,116 650,116 697,163 774,163",
+              "fill": "none",
+              "stroke": "#000000",
+              "stroke-width": 2,
+              "stroke-opacity": 0.55
+            }
+          },
+          {
+            "tag": "polyline",
+            "attributes": {
+              "points": "39,805 115,805 147,853",
+              "fill": "none",
+              "stroke": "#ffffff",
+              "stroke-width": 1.5,
+              "stroke-opacity": 0.4
+            }
+          }
+        ]
       }
     },
     {
@@ -479,182 +883,171 @@
       "group": "Card symbols",
       "layers": [
         {
-          "id": "attributePlateDark",
+          "id": "attributeOrbRing",
           "kind": "svg",
+          "label": "Attribute orb outer ring",
+          "group": "Card symbols",
+          "editorVisible": false,
+          "element": {
+            "tag": "circle",
+            "attributes": {
+              "cx": 718,
+              "cy": 93,
+              "r": 47.5,
+              "fill": "#050505",
+              "stroke": "#000000",
+              "stroke-width": 1.5
+            }
+          }
+        },
+        {
+          "id": "attributePlateDark",
+          "kind": "image",
           "label": "Dark attribute plate",
           "group": "Card symbols",
+          "assetId": "card.dynamis-duel.attribute.dark",
           "defaultVisible": false,
-          "element": {
-            "tag": "rect",
-            "attributes": {
-              "x": 676,
-              "y": 42,
-              "width": 92,
-              "height": 92,
-              "rx": 14,
-              "fill": "#4a2a7a",
-              "stroke": "#111111",
-              "stroke-width": 2
-            }
+          "region": {
+            "x": 672,
+            "y": 47,
+            "width": 92,
+            "height": 92
           }
         },
         {
           "id": "attributePlateLight",
-          "kind": "svg",
+          "kind": "image",
           "label": "Light attribute plate",
           "group": "Card symbols",
+          "assetId": "card.dynamis-duel.attribute.light",
           "defaultVisible": false,
-          "element": {
-            "tag": "rect",
-            "attributes": {
-              "x": 676,
-              "y": 42,
-              "width": 92,
-              "height": 92,
-              "rx": 14,
-              "fill": "#b8860b",
-              "stroke": "#111111",
-              "stroke-width": 2
-            }
+          "region": {
+            "x": 672,
+            "y": 47,
+            "width": 92,
+            "height": 92
           }
         },
         {
           "id": "attributePlateEarth",
-          "kind": "svg",
+          "kind": "image",
           "label": "Earth attribute plate",
           "group": "Card symbols",
+          "assetId": "card.dynamis-duel.attribute.earth",
           "defaultVisible": false,
-          "element": {
-            "tag": "rect",
-            "attributes": {
-              "x": 676,
-              "y": 42,
-              "width": 92,
-              "height": 92,
-              "rx": 14,
-              "fill": "#6b4a2a",
-              "stroke": "#111111",
-              "stroke-width": 2
-            }
+          "region": {
+            "x": 672,
+            "y": 47,
+            "width": 92,
+            "height": 92
           }
         },
         {
           "id": "attributePlateWater",
-          "kind": "svg",
+          "kind": "image",
           "label": "Water attribute plate",
           "group": "Card symbols",
+          "assetId": "card.dynamis-duel.attribute.water",
           "defaultVisible": false,
-          "element": {
-            "tag": "rect",
-            "attributes": {
-              "x": 676,
-              "y": 42,
-              "width": 92,
-              "height": 92,
-              "rx": 14,
-              "fill": "#1565c0",
-              "stroke": "#111111",
-              "stroke-width": 2
-            }
+          "region": {
+            "x": 672,
+            "y": 47,
+            "width": 92,
+            "height": 92
           }
         },
         {
           "id": "attributePlateFire",
-          "kind": "svg",
+          "kind": "image",
           "label": "Fire attribute plate",
           "group": "Card symbols",
+          "assetId": "card.dynamis-duel.attribute.fire",
           "defaultVisible": false,
-          "element": {
-            "tag": "rect",
-            "attributes": {
-              "x": 676,
-              "y": 42,
-              "width": 92,
-              "height": 92,
-              "rx": 14,
-              "fill": "#c62828",
-              "stroke": "#111111",
-              "stroke-width": 2
-            }
+          "region": {
+            "x": 672,
+            "y": 47,
+            "width": 92,
+            "height": 92
           }
         },
         {
           "id": "attributePlateWind",
-          "kind": "svg",
+          "kind": "image",
           "label": "Wind attribute plate",
           "group": "Card symbols",
+          "assetId": "card.dynamis-duel.attribute.wind",
           "defaultVisible": false,
-          "element": {
-            "tag": "rect",
-            "attributes": {
-              "x": 676,
-              "y": 42,
-              "width": 92,
-              "height": 92,
-              "rx": 14,
-              "fill": "#2e7d32",
-              "stroke": "#111111",
-              "stroke-width": 2
-            }
+          "region": {
+            "x": 672,
+            "y": 47,
+            "width": 92,
+            "height": 92
           }
         },
         {
           "id": "attributePlateDivine",
-          "kind": "svg",
+          "kind": "image",
           "label": "Divine attribute plate",
           "group": "Card symbols",
+          "assetId": "card.dynamis-duel.attribute.divine",
           "defaultVisible": false,
-          "element": {
-            "tag": "rect",
-            "attributes": {
-              "x": 676,
-              "y": 42,
-              "width": 92,
-              "height": 92,
-              "rx": 14,
-              "fill": "#8d6e00",
-              "stroke": "#111111",
-              "stroke-width": 2
-            }
+          "region": {
+            "x": 672,
+            "y": 47,
+            "width": 92,
+            "height": 92
           }
         },
         {
           "id": "attributePlateSpell",
-          "kind": "svg",
+          "kind": "image",
           "label": "Spell attribute plate",
           "group": "Card symbols",
+          "assetId": "card.dynamis-duel.attribute.spell",
           "defaultVisible": false,
-          "element": {
-            "tag": "rect",
-            "attributes": {
-              "x": 676,
-              "y": 42,
-              "width": 92,
-              "height": 92,
-              "rx": 14,
-              "fill": "#0f8a8a",
-              "stroke": "#111111",
-              "stroke-width": 2
-            }
+          "region": {
+            "x": 672,
+            "y": 47,
+            "width": 92,
+            "height": 92
           }
         },
         {
           "id": "attributePlateTrap",
-          "kind": "svg",
+          "kind": "image",
           "label": "Trap attribute plate",
           "group": "Card symbols",
+          "assetId": "card.dynamis-duel.attribute.trap",
           "defaultVisible": false,
-          "element": {
-            "tag": "rect",
-            "attributes": {
-              "x": 676,
-              "y": 42,
-              "width": 92,
-              "height": 92,
-              "rx": 14,
-              "fill": "#ad1457",
-              "stroke": "#111111",
-              "stroke-width": 2
+          "region": {
+            "x": 672,
+            "y": 47,
+            "width": 92,
+            "height": 92
+          }
+        },
+        {
+          "id": "attributeGlyph",
+          "kind": "text",
+          "label": "Attribute glyph",
+          "group": "Card symbols",
+          "semanticPath": "monster.attributeGlyph",
+          "defaultVisible": false,
+          "position": {
+            "x": 718,
+            "y": 127
+          },
+          "typography": {
+            "fill": "#ffffff",
+            "fontFamily": "DFP-ReiSho-W6",
+            "fontSize": 72,
+            "fontWeight": 400,
+            "textAnchor": "middle",
+            "stroke": {
+              "color": "#090909",
+              "width": 1.4,
+              "align": "outer",
+              "linejoin": "round"
             }
           }
         },
@@ -666,55 +1059,25 @@
           "semanticPath": "monster.attribute",
           "defaultVisible": false,
           "position": {
-            "x": 722,
-            "y": 70
+            "x": 718,
+            "y": 61
           },
           "typography": {
             "fill": "#ffffff",
             "fontFamily": "StoneSerifStd-Bold",
-            "fontSize": 15,
-            "textAnchor": "middle"
-          }
-        },
-        {
-          "id": "attributeGlyph",
-          "kind": "text",
-          "label": "Attribute glyph",
-          "group": "Card symbols",
-          "semanticPath": "monster.attributeGlyph",
-          "defaultVisible": false,
-          "position": {
-            "x": 722,
-            "y": 124
-          },
-          "typography": {
-            "fill": "#ffffff",
-            "fontFamily": "DFP-ReiSho-W6",
-            "fontSize": 56,
-            "fontWeight": 400,
-            "textAnchor": "middle"
+            "fontSize": 19.5,
+            "textAnchor": "middle",
+            "fit": "scale-x",
+            "maxWidth": 82,
+            "stroke": {
+              "color": "#050505",
+              "width": 2.6,
+              "align": "outer",
+              "linejoin": "round"
+            }
           }
         }
       ]
-    },
-    {
-      "id": "typeStrip",
-      "kind": "svg",
-      "label": "Type line strip",
-      "group": "Artwork and frames",
-      "element": {
-        "tag": "rect",
-        "attributes": {
-          "x": 118,
-          "y": 792,
-          "width": 652,
-          "height": 42,
-          "rx": 4,
-          "fill": "#f3ecd8",
-          "stroke": "#2a2a2a",
-          "stroke-width": 1.5
-        }
-      }
     },
     {
       "id": "levelPlate",
@@ -723,15 +1086,44 @@
       "group": "Card symbols",
       "defaultVisible": false,
       "element": {
-        "tag": "circle",
-        "attributes": {
-          "cx": 96,
-          "cy": 813,
-          "r": 54,
-          "fill": "#d8431d",
-          "stroke": "#6e1a08",
-          "stroke-width": 3
-        }
+        "tag": "g",
+        "children": [
+          {
+            "tag": "circle",
+            "attributes": {
+              "cx": 90,
+              "cy": 853,
+              "r": 44.5,
+              "fill": "#090605",
+              "stroke": "#000000",
+              "stroke-width": 1.5
+            }
+          },
+          {
+            "tag": "circle",
+            "attributes": {
+              "cx": 90,
+              "cy": 853,
+              "r": 41.5,
+              "fill": "#6e1c0d"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "levelBadgeOrb",
+      "kind": "image",
+      "label": "Level star orb",
+      "group": "Card symbols",
+      "assetId": "card.dynamis-duel.star.level",
+      "defaultVisible": false,
+      "editorVisible": false,
+      "region": {
+        "x": 49,
+        "y": 812,
+        "width": 82,
+        "height": 82
       }
     },
     {
@@ -742,14 +1134,20 @@
       "semanticPath": "monster.levelLabel",
       "defaultVisible": false,
       "position": {
-        "x": 96,
-        "y": 792
+        "x": 90,
+        "y": 821
       },
       "typography": {
         "fill": "#ffffff",
         "fontFamily": "StoneSerifStd-Bold",
-        "fontSize": 14,
-        "textAnchor": "middle"
+        "fontSize": 18,
+        "textAnchor": "middle",
+        "stroke": {
+          "color": "#050505",
+          "width": 2.6,
+          "align": "outer",
+          "linejoin": "round"
+        }
       }
     },
     {
@@ -760,14 +1158,20 @@
       "field": "level",
       "defaultVisible": false,
       "position": {
-        "x": 96,
-        "y": 846
+        "x": 90,
+        "y": 879
       },
       "typography": {
         "fill": "#ffffff",
         "fontFamily": "MatrixBoldSmallCaps",
-        "fontSize": 56,
-        "textAnchor": "middle"
+        "fontSize": 68,
+        "textAnchor": "middle",
+        "stroke": {
+          "color": "#140604",
+          "width": 3,
+          "align": "outer",
+          "linejoin": "round"
+        }
       }
     },
     {
@@ -777,15 +1181,74 @@
       "group": "Card symbols",
       "defaultVisible": false,
       "element": {
-        "tag": "circle",
-        "attributes": {
-          "cx": 96,
-          "cy": 813,
-          "r": 54,
-          "fill": "#f3ecd8",
-          "stroke": "#2a2a2a",
-          "stroke-width": 3
-        }
+        "tag": "g",
+        "children": [
+          {
+            "tag": "circle",
+            "attributes": {
+              "cx": 90,
+              "cy": 853,
+              "r": 44.5,
+              "fill": "#080605",
+              "stroke": "#000000",
+              "stroke-width": 1.5
+            }
+          },
+          {
+            "tag": "circle",
+            "attributes": {
+              "cx": 90,
+              "cy": 853,
+              "r": 41,
+              "fill": "#2b1c10",
+              "stroke": "#6d4c30",
+              "stroke-width": 1.5
+            }
+          },
+          {
+            "tag": "circle",
+            "attributes": {
+              "cx": 82,
+              "cy": 844,
+              "r": 24,
+              "fill": "#4a3019",
+              "fill-opacity": 0.55
+            }
+          },
+          {
+            "tag": "circle",
+            "attributes": {
+              "cx": 90,
+              "cy": 853,
+              "r": 36.5,
+              "fill": "none",
+              "stroke": "#090909",
+              "stroke-width": 6
+            }
+          },
+          {
+            "tag": "circle",
+            "attributes": {
+              "cx": 90,
+              "cy": 853,
+              "r": 36.5,
+              "fill": "none",
+              "stroke": "#e8e8ec",
+              "stroke-width": 3.4
+            }
+          },
+          {
+            "tag": "path",
+            "attributes": {
+              "d": "M 68 874 L 68 871 L 73 870 L 73 836 L 68 835 L 68 832 L 82 832 L 102 860 L 102 836 L 97 835 L 97 832 L 112 832 L 112 835 L 107 836 L 107 874 L 99 874 L 78 844 L 78 870 L 83 871 L 83 874 Z",
+              "fill": "#e4e4e8",
+              "stroke": "#090909",
+              "stroke-width": 2.4,
+              "paint-order": "stroke fill",
+              "stroke-linejoin": "round"
+            }
+          }
+        ]
       }
     },
     {
@@ -796,10 +1259,10 @@
       "assetId": "card.dynamis-duel.spell-trap.icon.continuous",
       "defaultVisible": false,
       "region": {
-        "x": 62,
-        "y": 779,
-        "width": 68,
-        "height": 68
+        "x": 47,
+        "y": 810,
+        "width": 86,
+        "height": 86
       }
     },
     {
@@ -810,10 +1273,10 @@
       "assetId": "card.dynamis-duel.spell-trap.icon.counter",
       "defaultVisible": false,
       "region": {
-        "x": 62,
-        "y": 779,
-        "width": 68,
-        "height": 68
+        "x": 47,
+        "y": 810,
+        "width": 86,
+        "height": 86
       }
     },
     {
@@ -824,10 +1287,10 @@
       "assetId": "card.dynamis-duel.spell-trap.icon.equip",
       "defaultVisible": false,
       "region": {
-        "x": 62,
-        "y": 779,
-        "width": 68,
-        "height": 68
+        "x": 47,
+        "y": 810,
+        "width": 86,
+        "height": 86
       }
     },
     {
@@ -838,10 +1301,10 @@
       "assetId": "card.dynamis-duel.spell-trap.icon.field",
       "defaultVisible": false,
       "region": {
-        "x": 62,
-        "y": 779,
-        "width": 68,
-        "height": 68
+        "x": 47,
+        "y": 810,
+        "width": 86,
+        "height": 86
       }
     },
     {
@@ -852,10 +1315,10 @@
       "assetId": "card.dynamis-duel.spell-trap.icon.quick-play",
       "defaultVisible": false,
       "region": {
-        "x": 62,
-        "y": 779,
-        "width": 68,
-        "height": 68
+        "x": 47,
+        "y": 810,
+        "width": 86,
+        "height": 86
       }
     },
     {
@@ -866,10 +1329,10 @@
       "assetId": "card.dynamis-duel.spell-trap.icon.ritual",
       "defaultVisible": false,
       "region": {
-        "x": 62,
-        "y": 779,
-        "width": 68,
-        "height": 68
+        "x": 47,
+        "y": 810,
+        "width": 86,
+        "height": 86
       }
     },
     {
@@ -880,15 +1343,15 @@
       "field": "types",
       "format": "type-list",
       "position": {
-        "x": 158,
-        "y": 824
+        "x": 144,
+        "y": 886
       },
       "typography": {
-        "fill": "#111111",
+        "fill": "#090909",
         "fontFamily": "StoneSerifITCTTBold-ArtificialSC",
-        "fontSize": 30,
+        "fontSize": 31,
         "fit": "scale-x",
-        "maxWidth": 596,
+        "maxWidth": 620,
         "letterSpacing": 0.25,
         "fitProfileSet": "type-line"
       }
@@ -899,17 +1362,53 @@
       "label": "Effect text box",
       "group": "Artwork and frames",
       "element": {
-        "tag": "rect",
-        "attributes": {
-          "x": 44,
-          "y": 848,
-          "width": 725,
-          "height": 200,
-          "rx": 4,
-          "fill": "#f7f2e4",
-          "stroke": "#2a2a2a",
-          "stroke-width": 1.5
-        }
+        "tag": "g",
+        "children": [
+          {
+            "tag": "rect",
+            "attributes": {
+              "x": 47,
+              "y": 903,
+              "width": 719,
+              "height": 202,
+              "fill": "none",
+              "stroke": "#1c1410",
+              "stroke-width": 3
+            }
+          },
+          {
+            "tag": "polyline",
+            "attributes": {
+              "points": "49,1103 49,905 764,905",
+              "fill": "none",
+              "stroke": "#ffffff",
+              "stroke-width": 2,
+              "stroke-opacity": 0.55
+            }
+          },
+          {
+            "tag": "polyline",
+            "attributes": {
+              "points": "49,1104 765,1104 765,905",
+              "fill": "none",
+              "stroke": "#000000",
+              "stroke-width": 2,
+              "stroke-opacity": 0.65
+            }
+          },
+          {
+            "tag": "rect",
+            "attributes": {
+              "x": 52,
+              "y": 909,
+              "width": 709,
+              "height": 193,
+              "fill": "none",
+              "stroke": "#090909",
+              "stroke-width": 2
+            }
+          }
+        ]
       }
     },
     {
@@ -920,16 +1419,16 @@
       "field": "description",
       "format": "lines",
       "position": {
-        "x": 60,
-        "y": 860
+        "x": 59,
+        "y": 916
       },
       "typography": {
-        "fill": "#111111",
+        "fill": "#0b0b0b",
         "fontFamily": "MatrixBook",
-        "fontSize": 30,
-        "lineHeight": 30,
-        "maxHeight": 180,
-        "maxWidth": 693,
+        "fontSize": 31,
+        "lineHeight": 31,
+        "maxHeight": 181,
+        "maxWidth": 695,
         "textAlign": "justify",
         "verticalAnchor": "top",
         "wrap": "word",
@@ -945,10 +1444,10 @@
       "maskField": "artworkOverlay",
       "maskChannel": "luminance",
       "placementRegion": {
-        "x": 42,
-        "y": 124,
-        "width": 729,
-        "height": 700
+        "x": 40,
+        "y": 119,
+        "width": 733,
+        "height": 732
       },
       "transformId": "artwork",
       "transformMode": "full-art",
@@ -965,14 +1464,33 @@
       "label": "Bottom bar",
       "group": "Artwork and frames",
       "element": {
-        "tag": "rect",
-        "attributes": {
-          "x": 28,
-          "y": 1058,
-          "width": 757,
-          "height": 98,
-          "fill": "#1a1a1f"
-        }
+        "tag": "g",
+        "children": [
+          {
+            "tag": "rect",
+            "attributes": {
+              "x": 38,
+              "y": 1111,
+              "width": 737,
+              "height": 37,
+              "fill": "#050507",
+              "stroke": "#000000",
+              "stroke-width": 2
+            }
+          },
+          {
+            "tag": "line",
+            "attributes": {
+              "x1": 38,
+              "y1": 1149,
+              "x2": 775,
+              "y2": 1149,
+              "stroke": "#ffffff",
+              "stroke-width": 1,
+              "stroke-opacity": 0.3
+            }
+          }
+        ]
       }
     },
     {
@@ -983,12 +1501,13 @@
       "element": {
         "tag": "rect",
         "attributes": {
-          "x": 44,
-          "y": 1082,
-          "width": 40,
-          "height": 40,
-          "rx": 4,
-          "fill": "#f3ecd8"
+          "x": 42,
+          "y": 1115,
+          "width": 30,
+          "height": 29,
+          "fill": "#252525",
+          "stroke": "#8e8e8e",
+          "stroke-width": 1.2
         }
       }
     },
@@ -999,13 +1518,13 @@
       "group": "Card text",
       "field": "era",
       "position": {
-        "x": 64,
-        "y": 1112
+        "x": 57,
+        "y": 1138
       },
       "typography": {
-        "fill": "#111111",
-        "fontFamily": "MatrixBoldSmallCaps",
-        "fontSize": 28,
+        "fill": "#ffffff",
+        "fontFamily": "StoneSerifStd-Bold",
+        "fontSize": 23,
         "textAnchor": "middle"
       }
     },
@@ -1017,14 +1536,13 @@
       "element": {
         "tag": "rect",
         "attributes": {
-          "x": 96,
-          "y": 1086,
-          "width": 172,
-          "height": 32,
-          "rx": 4,
-          "fill": "none",
-          "stroke": "#f3ecd8",
-          "stroke-width": 2
+          "x": 75,
+          "y": 1115,
+          "width": 80,
+          "height": 29,
+          "fill": "#252525",
+          "stroke": "#8e8e8e",
+          "stroke-width": 1.2
         }
       }
     },
@@ -1035,17 +1553,37 @@
       "group": "Card text",
       "field": "effectGroup",
       "position": {
-        "x": 182,
-        "y": 1109
+        "x": 115,
+        "y": 1134
       },
       "typography": {
-        "fill": "#f3ecd8",
+        "fill": "#ffffff",
         "fontFamily": "StoneSerifStd-Bold",
-        "fontSize": 15,
-        "letterSpacing": 1,
+        "fontSize": 13,
+        "letterSpacing": 0.3,
         "textAnchor": "middle",
         "fit": "scale-x",
-        "maxWidth": 160
+        "maxWidth": 74
+      }
+    },
+    {
+      "id": "aetherBox",
+      "kind": "svg",
+      "label": "Aether box",
+      "group": "Card symbols",
+      "defaultVisible": false,
+      "editorVisible": false,
+      "element": {
+        "tag": "rect",
+        "attributes": {
+          "x": 158,
+          "y": 1115,
+          "width": 24,
+          "height": 29,
+          "fill": "#252525",
+          "stroke": "#8e8e8e",
+          "stroke-width": 1.2
+        }
       }
     },
     {
@@ -1056,32 +1594,14 @@
       "semanticPath": "aether.glyph",
       "defaultVisible": false,
       "position": {
-        "x": 294,
-        "y": 1115
+        "x": 170,
+        "y": 1137
       },
       "typography": {
-        "fill": "#8fd9ff",
+        "fill": "#ffffff",
         "fontFamily": "StoneSerifStd-Bold",
-        "fontSize": 34,
+        "fontSize": 20,
         "textAnchor": "middle"
-      }
-    },
-    {
-      "id": "atkBadge",
-      "kind": "svg",
-      "label": "ATK badge",
-      "group": "Card symbols",
-      "defaultVisible": false,
-      "element": {
-        "tag": "rect",
-        "attributes": {
-          "x": 318,
-          "y": 1086,
-          "width": 56,
-          "height": 32,
-          "rx": 5,
-          "fill": "#c62828"
-        }
       }
     },
     {
@@ -1092,14 +1612,59 @@
       "semanticPath": "monster.atkLabel",
       "defaultVisible": false,
       "position": {
-        "x": 346,
-        "y": 1110
+        "x": 219,
+        "y": 1136
       },
       "typography": {
-        "fill": "#ffffff",
+        "fill": "#df0909",
         "fontFamily": "MatrixBoldSmallCaps",
-        "fontSize": 22,
+        "fontSize": 1,
         "textAnchor": "middle"
+      }
+    },
+    {
+      "id": "atkBadge",
+      "kind": "svg",
+      "label": "ATK badge",
+      "group": "Card symbols",
+      "defaultVisible": false,
+      "element": {
+        "tag": "g",
+        "children": [
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "215,1107 406.5,1107 406.5,1156 183,1156",
+              "fill": "#2d0202",
+              "stroke": "#050000",
+              "stroke-width": 1.5
+            }
+          },
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "223,1107 255,1107 215,1156 183,1156",
+              "fill": "#df0909",
+              "stroke": "#090000",
+              "stroke-width": 1.2
+            }
+          },
+          {
+            "tag": "g",
+            "attributes": {
+              "transform": "translate(219 1131.5) rotate(-50.8)"
+            },
+            "children": [
+              {
+                "tag": "path",
+                "attributes": {
+                  "d": "M -19 6.5 L -12.5 -6.5 L -8.5 -6.5 L -2 6.5 L -5.8 6.5 L -7.2 3.3 L -13.8 3.3 L -15.2 6.5 Z M -12.4 0.5 L -8.6 0.5 L -10.5 -3.8 Z M -2 -6.5 L 9.5 -6.5 L 9.5 -3.5 L 5.4 -3.5 L 5.4 6.5 L 1.6 6.5 L 1.6 -3.5 L -2 -3.5 Z M 11.5 -6.5 L 15.3 -6.5 L 15.3 -1.2 L 20.5 -6.5 L 25 -6.5 L 19.2 -0.6 L 25.5 6.5 L 20.8 6.5 L 16.6 1.6 L 15.3 2.9 L 15.3 6.5 L 11.5 6.5 Z",
+                  "fill": "#ffffff"
+                }
+              }
+            ]
+          }
+        ]
       }
     },
     {
@@ -1110,68 +1675,16 @@
       "field": "attack",
       "defaultVisible": false,
       "position": {
-        "x": 458,
-        "y": 1117
+        "x": 378,
+        "y": 1147
       },
       "typography": {
-        "fill": "#f3ecd8",
+        "fill": "#ffffff",
         "fontFamily": "MatrixBoldSmallCaps",
-        "fontSize": 38,
+        "fontSize": 52,
         "textAnchor": "end",
         "fit": "scale-x",
-        "maxWidth": 80
-      }
-    },
-    {
-      "id": "statsSeparator",
-      "kind": "svg",
-      "label": "Stats separator",
-      "group": "Card symbols",
-      "defaultVisible": false,
-      "element": {
-        "tag": "polygon",
-        "attributes": {
-          "points": "474,1092 484,1102 474,1112 464,1102",
-          "fill": "#f3ecd8"
-        }
-      }
-    },
-    {
-      "id": "def",
-      "kind": "text",
-      "label": "DEF value",
-      "group": "Card text",
-      "field": "defense",
-      "defaultVisible": false,
-      "position": {
-        "x": 570,
-        "y": 1117
-      },
-      "typography": {
-        "fill": "#f3ecd8",
-        "fontFamily": "MatrixBoldSmallCaps",
-        "fontSize": 38,
-        "textAnchor": "end",
-        "fit": "scale-x",
-        "maxWidth": 80
-      }
-    },
-    {
-      "id": "defBadge",
-      "kind": "svg",
-      "label": "DEF badge",
-      "group": "Card symbols",
-      "defaultVisible": false,
-      "element": {
-        "tag": "rect",
-        "attributes": {
-          "x": 578,
-          "y": 1086,
-          "width": 56,
-          "height": 32,
-          "rx": 5,
-          "fill": "#1565c0"
-        }
+        "maxWidth": 118
       }
     },
     {
@@ -1182,14 +1695,130 @@
       "semanticPath": "monster.defLabel",
       "defaultVisible": false,
       "position": {
-        "x": 606,
-        "y": 1110
+        "x": 594,
+        "y": 1136
+      },
+      "typography": {
+        "fill": "#1399d5",
+        "fontFamily": "MatrixBoldSmallCaps",
+        "fontSize": 1,
+        "textAnchor": "middle"
+      }
+    },
+    {
+      "id": "defBadge",
+      "kind": "svg",
+      "label": "DEF badge",
+      "group": "Card symbols",
+      "defaultVisible": false,
+      "element": {
+        "tag": "g",
+        "children": [
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "406.5,1107 590,1107 630,1156 406.5,1156",
+              "fill": "#010142",
+              "stroke": "#000008",
+              "stroke-width": 1.5
+            }
+          },
+          {
+            "tag": "polygon",
+            "attributes": {
+              "points": "558,1107 590,1107 630,1156 598,1156",
+              "fill": "#1399d5",
+              "stroke": "#000409",
+              "stroke-width": 1.2
+            }
+          },
+          {
+            "tag": "g",
+            "attributes": {
+              "transform": "translate(594 1131.5) rotate(50.8)"
+            },
+            "children": [
+              {
+                "tag": "path",
+                "attributes": {
+                  "d": "M -21.5 -6.5 L -14 -6.5 C -9.2 -6.5 -6.5 -3.8 -6.5 0 C -6.5 3.8 -9.2 6.5 -14 6.5 L -21.5 6.5 Z M -17.8 -3.5 L -17.8 3.5 L -14.2 3.5 C -11.6 3.5 -10.2 2.1 -10.2 0 C -10.2 -2.1 -11.6 -3.5 -14.2 -3.5 Z M -4 -6.5 L 6.5 -6.5 L 6.5 -3.5 L -0.2 -3.5 L -0.2 -1.4 L 5.6 -1.4 L 5.6 1.4 L -0.2 1.4 L -0.2 3.5 L 6.7 3.5 L 6.7 6.5 L -4 6.5 Z M 9.5 -6.5 L 20 -6.5 L 20 -3.5 L 13.3 -3.5 L 13.3 -1.2 L 19 -1.2 L 19 1.6 L 13.3 1.6 L 13.3 6.5 L 9.5 6.5 Z",
+                  "fill": "#ffffff"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "statsSeparator",
+      "kind": "svg",
+      "label": "Stats separator",
+      "group": "Card symbols",
+      "defaultVisible": false,
+      "element": {
+        "tag": "g",
+        "children": [
+          {
+            "tag": "line",
+            "attributes": {
+              "x1": 406.5,
+              "y1": 1107,
+              "x2": 406.5,
+              "y2": 1156,
+              "stroke": "#000000",
+              "stroke-width": 3
+            }
+          },
+          {
+            "tag": "path",
+            "attributes": {
+              "d": "M 395 1111 L 399 1119 L 399 1138 L 403.5 1138 L 403.5 1141 L 397.5 1141 L 397.5 1148 L 399 1150 L 395 1152 L 391 1150 L 392.5 1148 L 392.5 1141 L 386.5 1141 L 386.5 1138 L 391 1138 L 391 1119 Z",
+              "fill": "#dc1310"
+            }
+          },
+          {
+            "tag": "path",
+            "attributes": {
+              "d": "M 395 1115 L 396.6 1119.5 L 396.6 1137.5 L 393.4 1137.5 L 393.4 1119.5 Z",
+              "fill": "#2d0202"
+            }
+          },
+          {
+            "tag": "path",
+            "attributes": {
+              "d": "M 411.5 1119.5 L 428.5 1119.5 L 428.5 1131.5 C 428.5 1139.5 420 1145 420 1145 C 420 1145 411.5 1139.5 411.5 1131.5 Z",
+              "fill": "#1399d5"
+            }
+          },
+          {
+            "tag": "path",
+            "attributes": {
+              "d": "M 413.8 1122 L 426.2 1122 L 426.2 1131 C 426.2 1137 420 1141.5 420 1141.5 C 420 1141.5 413.8 1137 413.8 1131 Z",
+              "fill": "#0d6fa8"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "def",
+      "kind": "text",
+      "label": "DEF value",
+      "group": "Card text",
+      "field": "defense",
+      "defaultVisible": false,
+      "position": {
+        "x": 436,
+        "y": 1147
       },
       "typography": {
         "fill": "#ffffff",
         "fontFamily": "MatrixBoldSmallCaps",
-        "fontSize": 22,
-        "textAnchor": "middle"
+        "fontSize": 52,
+        "textAnchor": "start",
+        "fit": "scale-x",
+        "maxWidth": 118
       }
     },
     {
@@ -1201,8 +1830,8 @@
       "element": {
         "tag": "polygon",
         "attributes": {
-          "points": "654.0,1087.0 657.5,1097.1 668.3,1097.4 659.7,1103.9 662.8,1114.1 654.0,1108.0 645.2,1114.1 648.3,1103.9 639.7,1097.4 650.5,1097.1",
-          "fill": "#ffd54f"
+          "points": "644.0,1118.0 646.9,1126.2 655.6,1126.4 648.7,1131.6 651.2,1139.9 644.0,1135.0 636.8,1139.9 639.3,1131.6 632.4,1126.4 641.1,1126.2",
+          "fill": "#ffffff"
         }
       }
     },
@@ -1213,16 +1842,16 @@
       "group": "Card text",
       "field": "setId",
       "position": {
-        "x": 770,
-        "y": 1114
+        "x": 766,
+        "y": 1138
       },
       "typography": {
-        "fill": "#f3ecd8",
+        "fill": "#ffffff",
         "fontFamily": "ITCStoneSerifMedium",
-        "fontSize": 21,
+        "fontSize": 22,
         "textAnchor": "end",
         "fit": "scale-x",
-        "maxWidth": 96
+        "maxWidth": 106
       }
     }
   ],
@@ -1235,6 +1864,7 @@
       },
       "layerVisibility": {
         "levelPlate": true,
+        "levelBadgeOrb": true,
         "levelLabel": true,
         "level": true,
         "attribute": true,
@@ -1256,6 +1886,9 @@
       },
       "presets": {
         "frame": "dynamis-normal-frame"
+      },
+      "layerVisibility": {
+        "frameSurfaceNormal": true
       }
     },
     {
@@ -1266,6 +1899,9 @@
       },
       "presets": {
         "frame": "dynamis-effect-frame"
+      },
+      "layerVisibility": {
+        "frameSurfaceEffect": true
       }
     },
     {
@@ -1276,6 +1912,9 @@
       },
       "presets": {
         "frame": "dynamis-ritual-frame"
+      },
+      "layerVisibility": {
+        "frameSurfaceRitual": true
       }
     },
     {
@@ -1286,6 +1925,9 @@
       },
       "presets": {
         "frame": "dynamis-fusion-frame"
+      },
+      "layerVisibility": {
+        "frameSurfaceFusion": true
       }
     },
     {
@@ -1296,6 +1938,9 @@
       },
       "presets": {
         "frame": "dynamis-ultimatch-frame"
+      },
+      "layerVisibility": {
+        "frameSurfaceUltimatch": true
       }
     },
     {
@@ -1306,6 +1951,9 @@
       },
       "presets": {
         "frame": "dynamis-transformation-frame"
+      },
+      "layerVisibility": {
+        "frameSurfaceTransformation": true
       }
     },
     {
@@ -1316,6 +1964,9 @@
       },
       "presets": {
         "frame": "dynamis-god-frame"
+      },
+      "layerVisibility": {
+        "frameSurfaceGod": true
       }
     },
     {
@@ -1398,6 +2049,7 @@
         "frame": "dynamis-spell-frame"
       },
       "layerVisibility": {
+        "frameSurfaceSpell": true,
         "attributePlateSpell": true,
         "attribute": true,
         "attributeGlyph": true,
@@ -1418,6 +2070,7 @@
         "frame": "dynamis-trap-frame"
       },
       "layerVisibility": {
+        "frameSurfaceTrap": true,
         "attributePlateTrap": true,
         "attribute": true,
         "attributeGlyph": true,
@@ -1495,6 +2148,7 @@
         "equals": true
       },
       "layerVisibility": {
+        "aetherBox": true,
         "aetherIcon": true
       }
     },
